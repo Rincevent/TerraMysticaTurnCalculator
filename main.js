@@ -179,7 +179,7 @@ function populateFaction() {
   selectedfactionName = document.getElementById("selectFactions").value;
   var actions = factions[selectedfactionName];
   $("#divFaction").empty();
-  $('#divFaction').append("<p style=\"font-size:2vh\">Your plan for this turn:</p>");
+  $('#divFaction').append("<p style=\"font-size:2vh\">Your plan for this round:</p>");
   $('#divFaction').append("<table>");
   $.each(actions, function(idx, action){
     var actName = action["name"];
@@ -198,7 +198,7 @@ function populateFaction() {
   });
   $('#divFaction').append("</table>");
   $('#divFaction').append("<p><table>");
-  $('#divFaction').append("<tr style=\"font-size:2vh\"><td><strong>Ressources needed:</strong></td></tr>");
+  $('#divFaction').append("<tr style=\"font-size:2vh\"><td><strong>Resources needed:</strong></td></tr>");
   $('#divFaction').append("<tr style=\"font-size:2vh\"><td><label id=\"workerCount\">0</label> worker(s)</td></tr>");
   $('#divFaction').append("<tr style=\"font-size:2vh\"><td><label id=\"coinCount\">0</label> coin(s)</td></tr>");
   $('#divFaction').append("<tr style=\"font-size:2vh\"><td><label id=\"priestCount\">0</label> priest(s)</td></tr>");
