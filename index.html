@@ -9,6 +9,25 @@ th, td {
 th {
   text-align: left;
 }
+.accordion {
+  background-color: #eee;
+  color: #444;
+  cursor: pointer;
+  padding: 5px;
+  width: 30%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 2vh;
+  transition: 0.4s;
+}
+.active, .accordion:hover {
+  background-color: #ccc;
+}
+.panel {
+  display: none;
+  overflow: hidden;
+}
 </style>
 </head>
 
