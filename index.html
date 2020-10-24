@@ -1,6 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 th, td {
   padding: 2px;
@@ -12,9 +13,9 @@ th {
 </head>
 
 <body onload="init()">
-  <h2>Terra Mystica turn calculator</h2>
-  Select a faction:
-  <select id="selectFactions" onchange="populateFaction()"> 
+  <h2 style="font-size:4vh">Terra Mystica turn planner</h2>
+  <label style="font-size:2vh">Select a faction:</label>
+  <select style="font-size:2vh" id="selectFactions" onchange="populateFaction()">
   </select>
   <div id="divFaction">
   </div>

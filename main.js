@@ -168,6 +168,7 @@ var factions = JSON.parse(`{
   ]  
 }`);
 
+
 function init() {
   $.each(factions, function(faction, data){
     $('#selectFactions').append(new Option(faction, faction));
@@ -178,7 +179,7 @@ function populateFaction() {
   selectedfactionName = document.getElementById("selectFactions").value;
   var actions = factions[selectedfactionName];
   $("#divFaction").empty();
-  $('#divFaction').append("<p>Your plan for this turn:</p>");
+  $('#divFaction').append("<p style=\"font-size:2vh\">Your plan for this turn:</p>");
   $('#divFaction').append("<table>");
   $.each(actions, function(idx, action){
     var actName = action["name"];
@@ -186,10 +187,18 @@ function populateFaction() {
     if(action.hasOwnProperty("limit")){
       max = action["limit"];
     }
-    $('#divFaction').append("<tr><th>" + actName + ":</th><th><input type=\"number\" id=\""+idx+"\" value=\"0\" min=\"0\" max=\""+max+"\" onchange=\"computeRessources()\"></th></tr>");
+
+    $('#divFaction').append("<tr style=\"font-size:2vh\">");
+    $('#divFaction').append("<th>" + actName + ":</th>");
+    $('#divFaction').append("<th><select style=\"font-size:2vh\" id=\""+idx+"\" onchange=\"computeRessources()\"></th>");
+    for (i = 0; i <= max; i++) {
+        $('#'+idx).append(`<option value="${i}">${i}</option>`);
+    }
+    $('#divFaction').append("</tr>");
   });
   $('#divFaction').append("</table>");
-  $('#divFaction').append("<p><strong>Ressource cost:</strong> <label id=\"workerCount\">0</label> workers, <label id=\"coinCount\">0</label> coins, <label id=\"priestCount\">0</label> priests</p>");
+  $('#divFaction').append("<p style=\"font-size:2vh\"><strong>Ressources needed:</strong> <label id=\"workerCount\">0</label> workers, <label id=\"coinCount\">0</label> coins, <label id=\"priestCount\">0</label> priests</p>");
+
 }
 
 function computeRessources() {
