@@ -189,7 +189,7 @@ function populateFaction() {
     }
 
     $('#divFaction').append("<tr style=\"font-size:2vh\">");
-    $('#divFaction').append("<th>" + actName + ":</th>");
+    $('#divFaction').append("<th style=\"font-size:2vh\">" + actName + ":</th>");
     $('#divFaction').append("<th><select style=\"font-size:2vh\" id=\""+idx+"\" onchange=\"computeRessources()\"></th>");
     for (i = 0; i <= max; i++) {
         $('#'+idx).append(`<option value="${i}">${i}</option>`);
@@ -197,7 +197,12 @@ function populateFaction() {
     $('#divFaction').append("</tr>");
   });
   $('#divFaction').append("</table>");
-  $('#divFaction').append("<p style=\"font-size:2vh\"><strong>Ressources needed:</strong> <label id=\"workerCount\">0</label> workers, <label id=\"coinCount\">0</label> coins, <label id=\"priestCount\">0</label> priests</p>");
+  $('#divFaction').append("<p><table>");
+  $('#divFaction').append("<tr style=\"font-size:2vh\"><td><strong>Ressources needed:</strong></td></tr>");
+  $('#divFaction').append("<tr style=\"font-size:2vh\"><td><label id=\"workerCount\">0</label> worker(s)</td></tr>");
+  $('#divFaction').append("<tr style=\"font-size:2vh\"><td><label id=\"coinCount\">0</label> coin(s)</td></tr>");
+  $('#divFaction').append("<tr style=\"font-size:2vh\"><td><label id=\"priestCount\">0</label> priest(s)</td></tr>");
+  $('#divFaction').append("</table></p>");
 
 }
 
