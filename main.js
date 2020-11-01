@@ -1,15 +1,15 @@
 var selectedfactionName;
 var commonActions = JSON.parse(`{
   "DW": {"name": "Dwelling", "worker": "1", "coin": "2", "priest": "0", "max": "8"},
-  "TP": {"name": "Trading Post", "worker": "2", "coin": "3", "priest": "0", "upgrade": "DW", "max": "4"},
+  "TP": {"name": "Trading Post", "worker": "2", "coin": "3", "priest": "0", "upgrade": "DW", "limit": "9", "max": "4"},
   "TE": {"name": "Temple", "worker": "2", "coin": "5", "priest": "0", "limit": "4", "upgrade": "TP", "max": "3"},
   "SH": {"name": "Stronghold", "worker": "4", "coin": "6", "priest": "0", "limit": "1", "upgrade": "TP", "max": "1"},
   "SA": {"name": "Sanctuary", "worker": "4", "coin": "6", "priest": "0", "limit": "1", "upgrade": "TE", "max": "1"},
   "UD": {"name": "Upgrade Spade", "worker": "2", "coin": "5", "priest": "1", "vp": "6", "limit": "2"},
   "US": {"name": "Upgrade Ship", "worker": "0", "coin": "4", "priest": "1", "vp": ["2", "3", "4"], "limit": "3", "max": "3"},
   "S1": {"name": "Spade 1W", "worker": "1", "coin": "0", "priest": "0"},
-  "S2": {"name": "Spade 2W", "worker": "2", "coin": "0", "priest": "0"},
-  "S3": {"name": "Spade 3W", "worker": "3", "coin": "0", "priest": "0"},
+  "S2": {"name": "Spade 2W", "worker": "2", "coin": "0", "priest": "0", "limit": "9"},
+  "S3": {"name": "Spade 3W", "worker": "3", "coin": "0", "priest": "0", "limit": "9"},
   "TN": {"name": "Town", "worker": "0", "coin": "0", "priest": "0", "limit": "4"}
 }`);
 var factionsOverride = JSON.parse(`{
@@ -213,10 +213,10 @@ function populateFaction() {
   }
   $('#divScoring').append("</tr>");
   $('#divScoring').append("<tr style=\"font-size:2vh\">");
-  $('#divScoring').append("<td><label for=\"checkboxESH\" style=\"font-size:2vh\">Existing SH: </label></td><td><input id=\"checkboxESH\" type=\"checkbox\" onchange=\"computeScoring()\"></td>");
+  $('#divScoring').append("<td><label for=\"checkboxESH\" style=\"font-size:2vh\">Existing Stronghold: </label></td><td><input id=\"checkboxESH\" type=\"checkbox\" onchange=\"computeScoring()\"></td>");
   $('#divScoring').append("</tr>");
   $('#divScoring').append("<tr style=\"font-size:2vh\">");
-  $('#divScoring').append("<td><label for=\"checkboxESA\" style=\"font-size:2vh\">Existing SA: </label></td><td><input id=\"checkboxESA\" type=\"checkbox\" onchange=\"computeScoring()\"></td>");
+  $('#divScoring').append("<td><label for=\"checkboxESA\" style=\"font-size:2vh\">Existing Sanctuary: </label></td><td><input id=\"checkboxESA\" type=\"checkbox\" onchange=\"computeScoring()\"></td>");
   $('#divScoring').append("</tr>");
   $('#divScoring').append("<tr style=\"font-size:2vh\">");
   $('#divScoring').append("<td style=\"font-size:2vh\">Existing Ship:</td>");
