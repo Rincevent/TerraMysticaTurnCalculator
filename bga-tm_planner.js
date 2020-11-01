@@ -15,11 +15,11 @@ const Is_Inside_Game = /\?table=[0-9]*/.test(window.location.href);
 const Enable_Logging = true;
 
 var TMPcommonActions = JSON.parse(`{
-  "dwelling": {"name": "Dwelling", "worker": "1", "coin": "2", "priest": "0", "limit": "17", "max": "8"},
-  "tradinghouse": {"name": "Trading Post", "worker": "2", "coin": "3", "priest": "0", "upgrade": "dwelling", "limit": "9", "max": "4"},
-  "temple": {"name": "Temple", "worker": "2", "coin": "5", "priest": "0", "limit": "4", "upgrade": "tradinghouse", "max": "3"},
-  "stronghold": {"name": "Stronghold", "worker": "4", "coin": "6", "priest": "0", "limit": "1", "upgrade": "tradinghouse", "max": "1"},
-  "sanctuary": {"name": "Sanctuary", "worker": "4", "coin": "6", "priest": "0", "limit": "1", "upgrade": "temple", "max": "1"},
+  "dwelling": {"name": "Dwelling", "worker": "1", "coin": "2", "priest": "0", "limit": "17", "max": "8", "income_worker": ["1","1","1","1","1","1","1","1","0"]},
+  "tradinghouse": {"name": "Trading Post", "worker": "2", "coin": "3", "priest": "0", "upgrade": "dwelling", "limit": "9", "max": "4", "income_coin": ["2","2","2","2"], "income_power": ["1","1","2","2"]},
+  "temple": {"name": "Temple", "worker": "2", "coin": "5", "priest": "0", "limit": "4", "upgrade": "tradinghouse", "max": "3", "income_priest": ["1","1","1"]},
+  "stronghold": {"name": "Stronghold", "worker": "4", "coin": "6", "priest": "0", "limit": "1", "upgrade": "tradinghouse", "max": "1", "income_power": ["2"]},
+  "sanctuary": {"name": "Sanctuary", "worker": "4", "coin": "6", "priest": "0", "limit": "1", "upgrade": "temple", "max": "1", "income_priest": ["1"]},
   "exchange": {"name": "Upgrade Spade", "worker": "2", "coin": "5", "priest": "1", "vp": "6", "limit": "2", "max": "2"},
   "shipping": {"name": "Upgrade Ship", "worker": "0", "coin": "4", "priest": "1", "vp": ["2", "3", "4"], "limit": "3", "max": "3"},
   "S1": {"name": "Spade 1W", "worker": "1", "coin": "0", "priest": "0"},
@@ -28,12 +28,15 @@ var TMPcommonActions = JSON.parse(`{
   "town": {"name": "Town", "worker": "0", "coin": "0", "priest": "0", "limit": "4"}
 }`);
 var TMPfactionsOverride = JSON.parse(`{
-  "alchemists": {},
+  "alchemists": {
+    "tradinghouse": {"income_coin": ["2","2","3","4"], "income_power": ["1","1","1","1"]},
+    "stronghold": {"income_power": ["0"], "income_coin": ["6"]}
+  },
   "auren": {
     "sanctuary": {"coin": "8"}
   },
   "chaosmagicians": {
-    "stronghold": {"coin": "4"},
+    "stronghold": {"coin": "4", "income_power": ["0"], "income_worker": ["2"]},
     "sanctuary": {"coin": "8"}
   },
   "cultists": {
@@ -41,7 +44,7 @@ var TMPfactionsOverride = JSON.parse(`{
     "sanctuary": {"coin": "8"}
   },
   "darklings": {
-    "sanctuary": {"coin": "10"},
+    "sanctuary": {"coin": "10", "income_priest": ["2"]},
     "exchange": {"remove": "1"},
     "S1": {"remove": "1"},
     "S2": {"remove": "1"},
@@ -49,26 +52,29 @@ var TMPfactionsOverride = JSON.parse(`{
     "SP": {"name": "Spade", "worker": "0", "coin": "0", "priest": "1", "vp": "2"}
   },
   "dwarves": {
+    "tradinghouse": {"income_coin": ["3","2","2","3"]},
     "shipping": {"remove": "1"},
     "T1": {"name": "Tunneling 1W", "worker": "1", "coin": "0", "priest": "0", "vp": "4"},
     "T2": {"name": "Tunneling 2W", "worker": "2", "coin": "0", "priest": "0", "vp": "4", "hide_with_structure": "stronghold", "hide_with_number": "1"}
   },
   "engineers": {
-    "dwelling": {"worker": "1", "coin": "1"},
+    "dwelling": {"worker": "1", "coin": "1", "income_worker": ["0","1","1","0","1","1","0","1","1"]},
     "tradinghouse": {"worker": "1", "coin": "2"},
-    "temple": {"worker": "1", "coin": "4"},
+    "temple": {"worker": "1", "coin": "4", "income_priest": ["1","0","1"], "income_power": ["0","4","0"]},
     "stronghold": {"worker": "3", "coin": "6"},
     "sanctuary": {"worker": "3", "coin": "6"},
     "bridge": {"name": "Bridge", "worker": "2", "coin": "0", "priest": "0", "limit": "3"}
   },
   "fakirs": {
     "S1": {"remove": "1"},
-    "stronghold": {"coin": "10"},
+    "stronghold": {"coin": "10", "income_power": ["0"], "income_priest": ["1"]},
     "shipping": {"remove": "1"},
     "exchange": {"limit": "1"},
     "CF": {"name": "Carpet flight", "worker": "0", "coin": "0", "priest": "1", "vp": "4"}
   },
-  "giants": {},
+  "giants": {
+    "stronghold": {"income_power": ["4"]}
+  },
   "Halflings": {
     "stronghold": {"coin": "8"},
     "exchange": {"coin": "1"},
@@ -77,18 +83,20 @@ var TMPfactionsOverride = JSON.parse(`{
     "S3": {"vp": "1"}
   },
   "mermaids": {
+    "stronghold": {"income_power": ["4"]},
     "sanctuary": {"coin": "8"},
     "shipping": {"vp": ["0", "2", "3", "4", "5"], "limit": "5", "max": "5"}
   },
   "nomads": {
+    "tradinghouse": {"income_coin": ["2","2","3","4"], "income_power": ["1","1","1","1"]},
     "stronghold": {"coin": "8"}
   },
   "swarmlings": {
-    "dwelling": {"worker": "2", "coin": "3"},
-    "tradinghouse": {"worker": "3", "coin": "4"},
+    "dwelling": {"worker": "2", "coin": "3", "income_worker": ["2","1","1","1","1","1","1","1","0"]},
+    "tradinghouse": {"worker": "3", "coin": "4", "income_coin": ["2","2","2","3"], "income_power": ["2","2","2","2"]},
     "temple": {"worker": "3", "coin": "6"},
-    "stronghold": {"worker": "5", "coin": "8"},
-    "sanctuary": {"worker": "5", "coin": "8"}
+    "stronghold": {"worker": "5", "coin": "8", "income_power": ["4"]},
+    "sanctuary": {"worker": "5", "coin": "8", "income_priest": ["2"]}
   },
   "witches": {
     "town": {"vp": "5"}
@@ -96,32 +104,40 @@ var TMPfactionsOverride = JSON.parse(`{
 }`);
 
 var TMPboni = JSON.parse(`{
-  "0" : {"name": "None", "building": [], "vp": "0"},
-  "7" : {"name": "1VP per pass Dwelling", "building": ["dwelling"], "vp": "1", "passVP": "true"},
-  "8" : {"name": "2VP per pass TP", "building": ["tradinghouse"], "vp": "2", "passVP": "true"},
-  "9" : {"name": "4VP per pass SH/SA", "building": ["stronghold", "sanctuary"], "vp": "4", "passVP": "true"},
-  "10" : {"name": "3VP per pass Ship", "building": ["shipping"], "vp": "3", "passVP": "true"}
+  "1" : {"name": "income 1 priest", "building": [], "vp": "0", "income_priest": 1},
+  "2" : {"name": "income 1 worker 3 powers", "building": [], "vp": "0", "income_worker": 1, "income_power": 3},
+  "3" : {"name": "income 4 coins", "building": [], "vp": "0", "income_coin": 6},
+  "4" : {"name": "income 3 powers", "building": [], "vp": "0", "income_power": 3},
+  "5" : {"name": "income 2 coins", "building": [], "vp": "0", "income_coin": 2},
+  "6" : {"name": "income 4 coins", "building": [], "vp": "0", "income_coin": 4},
+  "7" : {"name": "1VP per pass Dwelling", "building": ["dwelling"], "vp": "1", "passVP": "true", "income_coin": 2},
+  "8" : {"name": "2VP per pass TP", "building": ["tradinghouse"], "vp": "2", "passVP": "true", "income_worker": 1},
+  "9" : {"name": "4VP per pass SH/SA", "building": ["stronghold", "sanctuary"], "vp": "4", "passVP": "true", "income_worker": 2},
+  "10" : {"name": "3VP per pass Ship", "building": ["shipping"], "vp": "3", "passVP": "true", "income_power": 3}
 }`);
 
 var TMPfavors = JSON.parse(`{
+  "7" : {"name": "income 1 power 1 worker", "building": [], "vp": "0", "income_worker": 1, "income_power": 1},
+  "8" : {"name": "income 4 powers", "building": [], "vp": "0", "income_power": 4},
+  "9" : {"name": "income 3 coins", "building": [], "vp": "0", "income_coin": 3},
   "10" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3"},
   "11" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2"},
   "12" : {"name": "2/3/4VP per pass TP", "building": ["tradinghouse"], "vp": ["0", "2", "3", "3", "4"], "passVP": "true"}
 }`);
 
 var TMPscorings = JSON.parse(`{
-  "1" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2"},
-  "2" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2"},
-  "3" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3"},
-  "4" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3"},
-  "5" : {"name": "5VP per SH/SA", "building": ["stronghold", "sanctuary"], "vp": "5"},
-  "6" : {"name": "5VP per SH/SA", "building": ["stronghold", "sanctuary"], "vp": "5"},
-  "7" : {"name": "2VP per spade", "building": ["S1", "S2", "S3", "SP"], "vp": "2"},
-  "8" : {"name": "5VP per Town", "building": ["town"], "vp": "5"},
-  "9" : {"name": "4VP per Temple", "building": ["temple"], "vp": "4"}
+  "1" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2", "income_req": "water", "income_req_divider": "4", "income_priest": 1},
+  "2" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2", "income_req": "fire", "income_req_divider": "4", "income_power": 4},
+  "3" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3", "income_req": "air", "income_req_divider": "4", "income_spade": 1},
+  "4" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3", "income_req": "water", "income_req_divider": "4", "income_spade": 1},
+  "5" : {"name": "5VP per SH/SA", "building": ["stronghold", "sanctuary"], "vp": "5", "income_req": "air", "income_req_divider": "2", "income_worker": 1},
+  "6" : {"name": "5VP per SH/SA", "building": ["stronghold", "sanctuary"], "vp": "5", "income_req": "fire", "income_req_divider": "2", "income_worker": 1},
+  "7" : {"name": "2VP per spade", "building": ["S1", "S2", "S3", "SP"], "vp": "2", "income_req": "earth", "income_req_divider": "1", "income_coin": 1},
+  "8" : {"name": "5VP per Town", "building": ["town"], "vp": "5", "income_req": "earth", "income_req_divider": "4", "income_spade": 1},
+  "9" : {"name": "4VP per Temple", "building": ["temple"], "vp": "4", "income_req": "priest", "income_req_divider": "1", "income_coin": 2}
 }`);
 
-// Main TM object
+// Main TM planner object
 var TMPlanner = {
     dojo: null,
     game: null,
@@ -153,16 +169,17 @@ var TMPlanner = {
             this.players[playerId].built_structures = {};
             this.players[playerId].favors = [];
             this.players[playerId].plannedRound = 0;
+            this.players[playerId].priests_in_cult = 0;
 		}
 
-        // extract bonus tiles
+        // extract bonus tiles info
         for (var bonusIdx in this.gamedatas.bonus_cards) {
             var bonus = this.gamedatas.bonus_cards[bonusIdx];
             this.bonus_tiles.push(parseInt(bonus.bonus_type));
         }
         this.bonus_tiles.sort();
 
-        // extract scoring tiles
+        // extract scoring tiles info
         for (var scoringIdx in this.gamedatas.scoring_tiles) {
             var scoring = this.gamedatas.scoring_tiles[scoringIdx];
             this.scoring_tiles.push(parseInt(scoring.scoring_type));
@@ -176,6 +193,7 @@ var TMPlanner = {
         this.renderTMPMenu();
         this.setStyles();
 
+        // update state on events
         this.dojo.subscribe("dwellingPlaced", this, "onChange");
         this.dojo.subscribe("landscapePlaced", this, "onChange");
         this.dojo.subscribe("structureUpgraded", this, "onChange");
@@ -203,10 +221,12 @@ var TMPlanner = {
     onChange: function(event) {
         this.updateView();
         this.updatePlayerPlannerMenu();
+        this.computeIncome();
     },
 
 
     buildFaction: function() {
+        // get the common action for player factions and override with specific faction info when needed
         for(var playerId in this.players) {
             var faction = this.players[playerId].faction;
             var overrides = TMPfactionsOverride[faction];
@@ -266,6 +286,15 @@ var TMPlanner = {
 
              this.players[playerId].ressources.priests = this.game.priestsCollection[playerId].items.length;
              this.players[playerId].supply.priests = this.game.priestSupply[playerId].items.length;
+
+             // calculate the number of priest in cult
+             this.players[playerId].priests_in_cult = 0;
+             for (var priestIdx in this.gamedatas.priests) {
+                 var priest = this.gamedatas.priests[priestIdx];
+                 if (priest.player_id == playerId && priest.cos_cult != null) {
+                     this.players[playerId].priests_in_cult += 1;
+                 }
+             }
          }
 
         // which player has which bonus tiles
@@ -321,6 +350,7 @@ var TMPlanner = {
         }
 
         this.renderPlayerPlannerMenu();
+        this.renderPlayerIncome();
     },
 
     getActionLimit: function(playerId, actionIdx) {
@@ -354,6 +384,38 @@ var TMPlanner = {
             }
         }
         return limit;
+    },
+
+    // add income information directly on player panel
+    renderPlayerIncome: function() {
+        for (var playerId in this.players) {
+            // reorganize stuff to have place for extra info
+            var workerIconElem = document.getElementById("workers_collection_" + playerId);
+            var wrkerCountElem = document.getElementById("workers_count_" + playerId);
+            if (isObjectEmpty(workerIconElem)) {
+                return;
+            }
+            if (isObjectEmpty(workerIconElem)) {
+                return;
+            }
+            this.dojo.place(workerIconElem, "coins_count_" + playerId, "after");
+            this.dojo.place(wrkerCountElem, "workers_collection_" + playerId, "after");
+
+            // add new income info
+            this.dojo.place("<span id='workers_income_"+ playerId + "'> (0)</span><br>", "workers_count_" + playerId, "after");
+            this.dojo.place("<span id='coins_income_"+ playerId + "'> (0)</span>", "coins_count_" + playerId, "after");
+            this.dojo.place("<span id='priests_income_"+ playerId + "'> (0)</span>", "priests_count_" + playerId, "after");
+            this.dojo.place("<span id='spades_income_"+ playerId + "'> (0)</span>", "spades_count_" + playerId, "after");
+            this.dojo.place("<span id='power_income_"+ playerId + "'> (0)</span>", "power3_count_" + playerId, "after");
+
+            // add tooltips
+            this.game.addTooltipHtml("workers_income_" + playerId, "worker income");
+            this.game.addTooltipHtml("coins_income_" + playerId, "coin income");
+            this.game.addTooltipHtml("priests_income_" + playerId, "priest income");
+            this.game.addTooltipHtml("power_income_" + playerId, "power income");
+            this.game.addTooltipHtml("spades_income_" + playerId, "spade income");
+        }
+        this.computeIncome();
     },
 
     // render planner menu for each players
@@ -480,6 +542,118 @@ var TMPlanner = {
         this.computeScoring(playerId);
     },
 
+    computeStructureIncome : function(action, income_type, structure_number) {
+        var res = 0;
+        if (action.hasOwnProperty(income_type)) {
+            var income = action[income_type];
+            for (var i = 0; i < structure_number; i++) {
+                res += parseInt(income[i]);
+            }
+        }
+
+       return res;
+    },
+
+    computeActionIncome : function(action, income_type) {
+        var res = 0;
+        if (action.hasOwnProperty(income_type)) {
+            res += parseInt(action[income_type]);
+        }
+
+       return res;
+    },
+
+    computeIncome : function() {
+        for (var playerId in this.players) {
+            var income = {"income_worker": 0, "income_coin": 0, "income_priest": 0, "income_power": 0, "income_spade": 0};
+            var faction = this.factions[this.players[playerId].faction];
+            if (this.current_turn < 6) {
+                // compute income from structures
+                for(var structIdx in this.players[playerId].built_structures) {
+                    var structure_number = this.players[playerId].built_structures[structIdx];
+                    var extra_struct = 0;
+                    if (structIdx == "dwelling") {
+                        extra_struct = 1; // dwellings has an extra worker income for 0 structure
+                    }
+                    if (faction.hasOwnProperty(structIdx)) {
+                        for (var incomeIdx1 in income) {
+                            var number = structure_number;
+                            if (incomeIdx1 == "income_worker") {
+                                number += extra_struct;
+                            }
+                            income[incomeIdx1] += this.computeStructureIncome(faction[structIdx], incomeIdx1, number);
+                        }
+                    }
+                }
+
+                // compute income for favors tiles
+                for(var favorId in this.players[playerId].favors) {
+                    var favorIdx = this.players[playerId].favors[favorId];
+                    if (TMPfavors.hasOwnProperty(favorIdx)) {
+                        var favor = TMPfavors[favorIdx];
+                        for (var incomeIdx2 in income) {
+                            income[incomeIdx2] += this.computeActionIncome(favor, incomeIdx2);
+                        }
+                    }
+                }
+
+                // compute income for bonus tile if player already passed
+                if (this.playerPassed(playerId)) {
+                    var bonusIdx = this.players[playerId].bonus_card;
+                    if (TMPboni.hasOwnProperty(bonusIdx)) {
+                        var bonus = TMPboni[bonusIdx];
+                        for (var incomeIdx3 in income) {
+                            income[incomeIdx3] += this.computeActionIncome(bonus, incomeIdx3);
+                        }
+                    }
+                }
+
+                // compute income from scoring tile
+                var scoringIdx = this.scoring_tiles[this.current_turn - 1];
+                var scoring = TMPscorings[scoringIdx];
+                var req_value = 0;
+                if (scoring.income_req == "priest") { //special case we need to count the number of priest in cult
+                    req_value = this.players[playerId].priests_in_cult;
+                } else {
+                    req_value = this.players[playerId].cult[scoring.income_req];
+                }
+                var score_multiplier = Math.floor(req_value / parseInt(scoring.income_req_divider));
+                for (var i = 0; i < score_multiplier; i++) {
+                    for (var incomeIdx4 in income) {
+                        income[incomeIdx4] += this.computeActionIncome(scoring, incomeIdx4);
+                    }
+                }
+            }
+
+            // update UI
+            if (isObjectEmpty(document.getElementById("workers_income_" + playerId))) {
+                return;
+            }
+            document.getElementById("workers_income_" + playerId).innerHTML = " (" + income.income_worker + ")";
+            document.getElementById("coins_income_" + playerId).innerHTML = " (" + income.income_coin + ")";
+            document.getElementById("spades_income_" + playerId).innerHTML = " (" + income.income_spade + ")";
+
+            // check for priest overflow
+            if (this.players[playerId].supply.priests < income.income_priest) {
+                document.getElementById("priests_income_" + playerId).innerHTML = " <span style='color:red'>(" + income.income_priest + ")</span>";
+                this.game.addTooltipHtml("priests_income_" + playerId, "priest income<br><span style='color:red'>warning: not enough priest in supply to fullfill priest income.</span>");
+            } else {
+                document.getElementById("priests_income_" + playerId).innerHTML = " (" + income.income_priest + ")";
+                this.game.addTooltipHtml("priests_income_" + playerId, "priest income");
+            }
+
+            // check for power overflow
+            var upgradablePower = (parseInt(this.players[playerId].ressources.power1) * 2) + parseInt(this.players[playerId].ressources.power2);
+            if (upgradablePower < income.income_power) {
+                document.getElementById("power_income_" + playerId).innerHTML = " <span style='color:red'>(" + income.income_power + ")</span>";
+                this.game.addTooltipHtml("power_income_" + playerId, "power income<br><span style='color:red'>warning: some power will be lost. You should spend some power before passing if possible.</span>");
+            } else {
+                document.getElementById("power_income_" + playerId).innerHTML = " (" + income.income_power + ")";
+                this.game.addTooltipHtml("power_income_" + playerId, "power income");
+            }
+        }
+    },
+
 
     radioRoundSelected : function(event) {
         if(isObjectEmpty(event.target)) {
@@ -501,26 +675,25 @@ var TMPlanner = {
         this.computeScoring(playerId);
     },
 
-    computeScoring: function(playerId) {
-        var VP = 0;
-        var errorString = "";
-        var detailString = "";
-        let existingBuildings = {
-            dwelling : parseInt(this.players[playerId].built_structures.dwelling),
-            tradinghouse : parseInt(this.players[playerId].built_structures.tradinghouse),
-            stronghold : parseInt(this.players[playerId].built_structures.stronghold),
-            sanctuary : parseInt(this.players[playerId].built_structures.sanctuary),
-            shipping : parseInt(this.players[playerId].built_structures.shipping)
-        };
-        var buildingsAfterActions = Object.assign({}, existingBuildings);
-
-        // check for which turn we are planning
-        var plannedTurn = this.players[playerId].plannedRound;
+    playerPassed: function(playerId) {
         var playerPassed = false;
         var playerPassedElem = document.getElementById("fp_container_" + playerId);
         if (!isObjectEmpty(playerPassedElem)) {
             playerPassed = playerPassedElem.classList.contains("fp_container_passed");
         }
+        return playerPassed;
+    },
+
+    computeScoring: function(playerId) {
+        var VP = 0;
+        var errorString = "";
+        var detailString = "";
+        let existingBuildings = this.players[playerId].built_structures;
+        var buildingsAfterActions = Object.assign({}, existingBuildings);
+
+        // check for which turn we are planning
+        var plannedTurn = this.players[playerId].plannedRound;
+        var playerPassed = this.playerPassed(playerId);
 
         if (playerPassed) { // plan next turn if player already passed
             plannedTurn = 1;
@@ -604,7 +777,7 @@ var TMPlanner = {
         if (plannedTurn == 1 && !playerPassed) {
             bonusIdx = 0; // we can not compute bonus tile if plan for next turn and player did not pass yet
         }
-        var bonus = TMPboni["0"];
+        var bonus = TMPboni["1"];
         if (TMPboni.hasOwnProperty(bonusIdx)) {
             bonus = TMPboni[bonusIdx];
         }
@@ -705,22 +878,41 @@ function isObjectEmpty(object) {
         (Object.keys(object).length === 0 && object.constructor === Object);
 }
 
+function waitForTMLoading(lambda) {
+    // check if game is properly loaded, if not loop until it is
+    var gamedatas = window.parent.gameui.gamedatas;
+    if (!isObjectEmpty(gamedatas)) {
+        if (Object.keys(gamedatas.players).length > 0) {
+            var firstPlayerId = Object.keys(gamedatas.players)[0];
+            var elem = document.getElementById("workers_count_" + firstPlayerId);
+            if (!isObjectEmpty(elem)) {
+                lambda();
+                return;
+            }
+        }
+    }
+
+    setTimeout(() => {waitForTMLoading(lambda);} , 1000);
+}
+
 // Everything starts here
 window.onload = async function() {
     if (Is_Inside_Game) {
-        await sleep(3000); // Wait for BGA to load dojo and TM scripts
-        if (!window.parent || !window.parent.gameui || !window.parent.gameui.game_name ||
-            window.parent.gameui.game_name != "terramystica") {
-            return;
-        }
-
-        // Prevent multiple launches
-        if (window.parent.isTMPlannerStarted) {
-            return;
-        } else {
-            if (Enable_Logging) console.log("TMPlanner activated");
-            window.parent.isTMPlannerStarted = true;
-            window.parent.tmPlanner = TMPlanner.init();
-        }
+        setTimeout(() => { // Wait for BGA to load dojo and TM scripts
+            if (!window.parent || !window.parent.gameui || !window.parent.gameui.game_name ||
+                window.parent.gameui.game_name != "terramystica") {
+                return;
+            }
+            waitForTMLoading(() => {
+                // Prevent multiple launches
+                if (window.parent.isTMPlannerStarted) {
+                    return;
+                } else {
+                    if (Enable_Logging) console.log("TMPlanner activated");
+                    window.parent.isTMPlannerStarted = true;
+                    window.parent.tmPlanner = TMPlanner.init();
+                }
+            });
+        }, 2000);
     }
 };
