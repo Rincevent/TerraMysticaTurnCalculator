@@ -276,6 +276,7 @@ var TMPlanner = {
              this.players[playerId].ressources.workers = this.game.workersCollection[playerId].items.length;
              this.players[playerId].supply.bridge = this.game.bridgeSupply[playerId].items.length;
 
+             this.players[playerId].favors = [];
              for (var i=0; i< this.game.favorsCollection[playerId].items.length; i++) {
                  var favorIdx = parseInt(this.game.favorsCollection[playerId].items[i].id.split("_")[2]);
                  this.players[playerId].favors.push(parseInt(this.gamedatas.favor_tiles[favorIdx].favor_type));
