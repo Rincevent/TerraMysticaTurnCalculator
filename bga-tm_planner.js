@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.0.0
+// @version      1.1.2
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -524,6 +524,21 @@ var TMPlanner = {
         return player.faction != null && this.factions.hasOwnProperty(player.faction);
     },
 
+    getPlannedActions : function(playerId) {
+        var plannedActions = {};
+        var faction = this.factions[this.players[playerId].faction];
+        for (var actionIdx in faction) {
+            var elem = document.getElementById("select_" + playerId + "_" + actionIdx);
+            if (!isObjectEmpty(elem)) {
+                var count = parseInt(elem.value);
+                if (count > 0) {
+                    plannedActions[actionIdx] = count;
+                }
+            }
+        }
+        return plannedActions;
+    },
+
     computeResourcesNeeded : function(event) {
         var selectId = event.target.getAttribute('id');
         var selectSplit = selectId.split("_");
@@ -549,17 +564,13 @@ var TMPlanner = {
         var nbCoins = 0;
         var nbPriests = 0;
         var faction = this.factions[player.faction];
-        for (var actionIdx in faction) {
-            var elem = document.getElementById("select_" + playerId + "_" + actionIdx);
-            if (!isObjectEmpty(elem)) {
-                var count = parseInt(elem.value);
-                if (count > 0) {
-                    var action = faction[actionIdx];
-                    nbWorkers += action.worker*count;
-                    nbCoins += action.coin*count;
-                    nbPriests += action.priest*count;
-                }
-            }
+        var plannedActions = this.getPlannedActions(playerId);
+        for (var actionIdx in plannedActions) {
+            var count = plannedActions[actionIdx];
+            var action = faction[actionIdx];
+            nbWorkers += action.worker*count;
+            nbCoins += action.coin*count;
+            nbPriests += action.priest*count;
         }
         document.getElementById("workerCount_" + playerId).innerHTML = nbWorkers;
         document.getElementById("coinCount_" + playerId).innerHTML = nbCoins;
@@ -731,6 +742,37 @@ var TMPlanner = {
         return playerPassed;
     },
 
+    getPlannedRound : function(playerId) {
+        var plannedRound = this.players[playerId].plannedRound;
+        if (this.playerPassed(playerId)) { // plan next turn if player already passed
+            plannedRound = 1;
+        }
+        if (this.current_turn == 6) { // can not plan next turn if it is last turn
+            plannedRound = 0;
+        }
+        return plannedRound;
+    },
+
+    computeScoreForTile: function(tile, plannedActions, buildingsAfterActions) {
+        var VPToAdd = 0;
+        for(var idF in tile.building) {
+            var building = tile.building[idF];
+            var count = 0;
+            if (tile.hasOwnProperty("passVP")) {
+                count = parseInt(buildingsAfterActions[building]);
+                if (tile.vp.length > count) {
+                    VPToAdd += parseInt(tile.vp[count]);
+                }
+            } else {
+                count = plannedActions[building];
+                if (!isObjectEmpty(count)) {
+                    VPToAdd += parseInt(tile.vp)*count;
+                }
+            }
+        }
+        return VPToAdd;
+    },
+
     computeScoring: function(playerId) {
         var VP = 0;
         var errorString = "";
@@ -745,55 +787,42 @@ var TMPlanner = {
         }
 
         // check for which turn we are planning
-        var plannedTurn = player.plannedRound;
-        var playerPassed = this.playerPassed(playerId);
-
-        if (playerPassed) { // plan next turn if player already passed
-            plannedTurn = 1;
-        }
-        if (this.current_turn == 6) { // can not plan next turn if it is last turn
-            plannedTurn = 0;
-        }
+        var plannedRound = this.getPlannedRound(playerId);
 
         // compute score for actions
         var faction = this.factions[this.players[playerId].faction];
-        for (var actionIdx in faction) {
+        var plannedActions = this.getPlannedActions(playerId);
+        for (var actionIdx in plannedActions) {
+            var count = plannedActions[actionIdx];
             var action = faction[actionIdx];
-            var elem = document.getElementById("select_" + playerId + "_" + actionIdx);
-            var count = 0;
-            if (!isObjectEmpty(elem)) {
-                count = parseInt(elem.value);
+            if(action.hasOwnProperty("vp")) {
+                var VPToAdd = 0;
+                if (Array.isArray(action.vp)) {
+                    var startingPoint = existingBuildings[actionIdx];
+                    if (action.vp.length >= (parseInt(startingPoint) + parseInt(count))) {
+                        for (var i = 0; i < count; i++) {
+                            VPToAdd += parseInt(action.vp[startingPoint]);
+                            startingPoint++;
+                        }
+                    }
+                }
+                else {
+                    VPToAdd = parseInt(action.vp)*count;
+                }
+                if (VPToAdd > 0) {
+                    VP += VPToAdd;
+                    detailString += VPToAdd + "VP for \"" + action.name + "\"<br>";
+                }
             }
-            if (count > 0) {
-                if(action.hasOwnProperty("vp")) {
-                    if (Array.isArray(action.vp)) {
-                        var startingPoint = existingBuildings[actionIdx];
-                        if (action.vp.length >= (parseInt(startingPoint) + parseInt(count))) {
-                            var VPToAdd = 0;
-                            for (var i = 0; i < count; i++) {
-                                VPToAdd += parseInt(action.vp[startingPoint]);
-                                startingPoint++;
-                            }
-                            VP += VPToAdd;
-                            detailString += VPToAdd + "VP for \"" + action.name + "\"<br>";
-                        }
-                    }
-                    else {
-                        var VPToAddS = parseInt(action.vp)*count;
-                        VP += VPToAddS;
-                        detailString += VPToAddS + "VP for \"" + action.name + "\"<br>";
-                    }
-                }
-                if (buildingsAfterActions.hasOwnProperty(actionIdx)){
-                    buildingsAfterActions[actionIdx] += count;
-                }
-                if(action.hasOwnProperty("upgrade")){
-                    var upgradeFrom = action.upgrade;
-                    if (buildingsAfterActions.hasOwnProperty(upgradeFrom)){
-                        buildingsAfterActions[upgradeFrom] -= count;
-                        if (buildingsAfterActions[upgradeFrom] < 0) {
-                            errorString += "<u>Warning:</u> not enough " + faction[upgradeFrom].name + " to upgrade from to build " + count + " " + action.name + ".<br>";
-                        }
+            if (buildingsAfterActions.hasOwnProperty(actionIdx)){
+                buildingsAfterActions[actionIdx] += count;
+            }
+            if(action.hasOwnProperty("upgrade")){
+                var upgradeFrom = action.upgrade;
+                if (buildingsAfterActions.hasOwnProperty(upgradeFrom)){
+                    buildingsAfterActions[upgradeFrom] -= count;
+                    if (buildingsAfterActions[upgradeFrom] < 0) {
+                        errorString += "<u>Warning:</u> not enough " + faction[upgradeFrom].name + " to upgrade from to build " + count + " " + action.name + ".<br>";
                     }
                 }
             }
@@ -804,22 +833,14 @@ var TMPlanner = {
             var countAA = buildingsAfterActions[idx];
             if (faction.hasOwnProperty(idx) && countAA > faction[idx].max) {
                 var actionName = faction[idx].name;
-                errorString += "<u>Warning:</u> not able to build " + parseInt(document.getElementById("select_" + playerId + "_" + idx).value) + " " + actionName + ", only " + (parseInt(faction[idx].max) - parseInt(this.players[playerId].built_structures[idx])) + " " + actionName + " in the supply. Some " + actionName + " must be upgraded first.<br>";
+                errorString += "<u>Warning:</u> not able to build " + plannedActions[idx] + " " + actionName + ", only " + (parseInt(faction[idx].max) - parseInt(this.players[playerId].built_structures[idx])) + " " + actionName + " in the supply. Some " + actionName + " must be upgraded first.<br>";
             }
         }
 
         // compute score for scoring tile
-        var scoringIdx = this.scoring_tiles[this.current_turn + plannedTurn - 1];
+        var scoringIdx = this.scoring_tiles[this.current_turn + plannedRound - 1];
         var scoring = TMPscorings[scoringIdx];
-        var VPToAddSc = 0;
-        for(var id in scoring.building) {
-            var building = scoring.building[id];
-            var elemSc = document.getElementById("select_" + playerId + "_" + building);
-            if (!isObjectEmpty(elemSc)) {
-                var countSc = parseInt(elemSc.value);
-                VPToAddSc += parseInt(scoring.vp)*countSc;
-            }
-        }
+        var VPToAddSc = this.computeScoreForTile(scoring, plannedActions, buildingsAfterActions);
         if (VPToAddSc > 0) {
             VP += VPToAddSc;
             detailString += VPToAddSc + "VP for scoring tile \"" + scoring.name + "\"<br>";
@@ -827,19 +848,14 @@ var TMPlanner = {
 
         // compute score for bonus tile
         var bonusIdx = this.players[playerId].bonus_card;
-        if (plannedTurn == 1 && !playerPassed) {
+        if (plannedRound == 1 && !this.playerPassed(playerId)) {
             bonusIdx = 0; // we can not compute bonus tile if plan for next turn and player did not pass yet
         }
         var bonus = TMPboni["1"];
         if (TMPboni.hasOwnProperty(bonusIdx)) {
             bonus = TMPboni[bonusIdx];
         }
-        var VPToAddB = 0;
-        for(var idB in bonus.building) {
-            var buildingB = bonus.building[idB];
-            var countB = parseInt(buildingsAfterActions[buildingB]);
-            VPToAddB += parseInt(bonus.vp)*countB;
-        }
+        var VPToAddB = this.computeScoreForTile(bonus, plannedActions, buildingsAfterActions);
         if (VPToAddB > 0) {
             VP += VPToAddB;
             detailString += VPToAddB + "VP for bonus tile \"" + bonus.name + "\"<br>";
@@ -850,22 +866,7 @@ var TMPlanner = {
             var favorIdx = this.players[playerId].favors[favorId];
             if (TMPfavors.hasOwnProperty(favorIdx)) {
                 var favor = TMPfavors[favorIdx];
-                var VPToAddF = 0;
-                for(var idF in favor.building) {
-                    var buildingF = favor.building[idF];
-                    if (favor.hasOwnProperty("passVP")) {
-                        var countF = parseInt(buildingsAfterActions[buildingF]);
-                        if (favor.vp.length > countF) {
-                            VPToAddF += parseInt(favor.vp[countF]);
-                        }
-                    } else {
-                        var elemF = document.getElementById("select_" + playerId + "_" + buildingF);
-                        if (!isObjectEmpty(elemF)) {
-                            var countFF = parseInt(elemF.value);
-                            VPToAddF += parseInt(favor.vp)*countFF;
-                        }
-                    }
-                }
+                var VPToAddF = this.computeScoreForTile(favor, plannedActions, buildingsAfterActions);
                 if (VPToAddF > 0) {
                     VP += VPToAddF;
                     detailString += VPToAddF + "VP for favor tile \"" + favor.name + "\"<br>";
