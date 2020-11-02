@@ -12,7 +12,7 @@
 
 // System variables - don't edit
 const Is_Inside_Game = /\?table=[0-9]*/.test(window.location.href);
-const Enable_Logging = true;
+const Enable_Logging = false;
 
 var TMPcommonActions = JSON.parse(`{
   "dwelling": {"name": "Dwelling", "worker": "1", "coin": "2", "priest": "0", "limit": "17", "max": "8", "income_worker": ["1","1","1","1","1","1","1","1","0"]},
@@ -157,20 +157,23 @@ var TMPlanner = {
         this.game = window.parent.gameui;
         this.gamedatas = this.game.gamedatas;
 
-		// prepare data structure for each players
-		for (var playerId in this.gamedatas.players) {
+        // prepare data structure for each players
+        for (var playerId in this.gamedatas.players) {
             var playerInfo = this.gamedatas.players[playerId];
             this.players[playerId] = {};
-            this.players[playerId].name = playerInfo.name;
-            this.players[playerId].faction = playerInfo.faction;
-            this.players[playerId].cult = {};
-            this.players[playerId].ressources = {};
-            this.players[playerId].supply = {};
-            this.players[playerId].built_structures = {};
-            this.players[playerId].favors = [];
-            this.players[playerId].plannedRound = 0;
-            this.players[playerId].priests_in_cult = 0;
-		}
+            var player = this.players[playerId];
+            player.name = playerInfo.name;
+            player.faction = null;
+            player.cult = {};
+            player.ressources = {};
+            player.supply = {};
+            player.built_structures = {};
+            player.favors = [];
+            player.plannedRound = 0;
+            player.priests_in_cult = 0;
+            player.actions_limit = {};
+            player.last_computed_income = {"income_worker": 0, "income_coin": 0, "income_priest": 0, "income_power": 0, "income_spade": 0, "supply_priest": 0, "supply_power": 0};
+        }
 
         // extract bonus tiles info
         for (var bonusIdx in this.gamedatas.bonus_cards) {
@@ -185,13 +188,17 @@ var TMPlanner = {
             this.scoring_tiles.push(parseInt(scoring.scoring_type));
         }
 
-		if (Enable_Logging) console.log("Bonus tiles: " + this.bonus_tiles);
-		if (Enable_Logging) console.log("Scoring tiles: " + this.scoring_tiles);
+        if (Enable_Logging) console.log("Bonus tiles: " + this.bonus_tiles);
+        if (Enable_Logging) console.log("Scoring tiles: " + this.scoring_tiles);
 
         this.buildFaction();
         this.updateView();
         this.renderTMPMenu();
+        this.renderPlayerIncome();
         this.setStyles();
+
+        this.onFactionChosen();
+        this.computeIncome();
 
         // update state on events
         this.dojo.subscribe("dwellingPlaced", this, "onChange");
@@ -205,16 +212,12 @@ var TMPlanner = {
         this.dojo.subscribe("advanceCultTrack", this, "onChange");
         this.dojo.subscribe("orderAPriest", this, "onChange");
         this.dojo.subscribe("actionUsed", this, "onChange");
-        this.dojo.subscribe("specialActionUsed", this, "onChange");
-        this.dojo.subscribe("terrainTransformed", this, "onChange");
-        this.dojo.subscribe("townFounded", this, "onChange");
         this.dojo.subscribe("incomePhase", this, "onChange");
         this.dojo.subscribe("powerActionConvert", this, "onChange");
-        this.dojo.subscribe("powerViaStructures", this, "onChange");
-        this.dojo.subscribe("powerIncome", this, "onChange");
-        this.dojo.subscribe("workersIncome", this, "onChange");
+        this.dojo.subscribe("powerActionBridge", this, "onChange");
         this.dojo.subscribe("workersForPriests", this, "onChange");
 
+        this.dojo.subscribe("factionBoardChosen", this, "onFactionChosen");
         return this;
     },
 
@@ -224,11 +227,22 @@ var TMPlanner = {
         this.computeIncome();
     },
 
+    onFactionChosen: function(event) {
+        // update player faction info
+        for (var playerId in this.gamedatas.players) {
+            var faction = this.gamedatas.players[playerId].faction;
+            if (this.factions.hasOwnProperty(faction)) {
+                this.players[playerId].faction = this.gamedatas.players[playerId].faction;
+                this.renderPlayerPlannerMenu(playerId);
+            }
+        }
+
+        this.updatePlayerPlannerMenu();
+    },
 
     buildFaction: function() {
         // get the common action for player factions and override with specific faction info when needed
-        for(var playerId in this.players) {
-            var faction = this.players[playerId].faction;
+        for(var faction in TMPfactionsOverride) {
             var overrides = TMPfactionsOverride[faction];
             this.factions[faction] = {};
             for(var action in TMPcommonActions) {
@@ -255,7 +269,7 @@ var TMPlanner = {
             }
         }
 
-		if (Enable_Logging) console.log("Factions info:");
+        if (Enable_Logging) console.log("Factions info:");
         if (Enable_Logging) console.log(this.factions);
     },
 
@@ -264,36 +278,37 @@ var TMPlanner = {
          // collect info for each players
          for (var playerId in this.gamedatas.players) {
              var playerInfo = this.gamedatas.players[playerId];
-             this.players[playerId].built_structures = { "dwelling": 0, "tradinghouse": 0, "temple": 0, "stronghold": 0, "sanctuary": 0, "shipping": parseInt(playerInfo.player_shipping), "exchange": parseInt(playerInfo.player_exchange)-1 };
+             var player = this.players[playerId];
+             player.built_structures = { "dwelling": 0, "tradinghouse": 0, "temple": 0, "stronghold": 0, "sanctuary": 0, "shipping": parseInt(playerInfo.player_shipping), "exchange": parseInt(playerInfo.player_exchange)-1 };
 
-             this.players[playerId].cult.air = parseInt(playerInfo.player_aircult);
-             this.players[playerId].cult.earth = parseInt(playerInfo.player_earthcult);
-             this.players[playerId].cult.fire = parseInt(playerInfo.player_firecult);
-             this.players[playerId].cult.water = parseInt(playerInfo.player_watercult);
-             this.players[playerId].ressources.coins = parseInt(playerInfo.player_coins);
-             this.players[playerId].score = parseInt(playerInfo.score);
-             this.players[playerId].ressources.spades = parseInt(playerInfo.player_spades);
-             this.players[playerId].ressources.workers = this.game.workersCollection[playerId].items.length;
-             this.players[playerId].supply.bridge = this.game.bridgeSupply[playerId].items.length;
+             player.cult.air = parseInt(playerInfo.player_aircult);
+             player.cult.earth = parseInt(playerInfo.player_earthcult);
+             player.cult.fire = parseInt(playerInfo.player_firecult);
+             player.cult.water = parseInt(playerInfo.player_watercult);
+             player.ressources.coins = parseInt(playerInfo.player_coins);
+             player.score = parseInt(playerInfo.score);
+             player.ressources.spades = parseInt(playerInfo.player_spades);
+             player.ressources.workers = this.game.workersCollection[playerId].items.length;
+             player.supply.bridge = this.game.bridgeSupply[playerId].items.length;
 
-             this.players[playerId].favors = [];
+             player.favors = [];
              for (var i=0; i< this.game.favorsCollection[playerId].items.length; i++) {
                  var favorIdx = parseInt(this.game.favorsCollection[playerId].items[i].id.split("_")[2]);
-                 this.players[playerId].favors.push(parseInt(this.gamedatas.favor_tiles[favorIdx].favor_type));
+                 player.favors.push(parseInt(this.gamedatas.favor_tiles[favorIdx].favor_type));
              }
-             this.players[playerId].ressources.power1 = this.game.power1Supply[playerId].items.length;
-             this.players[playerId].ressources.power2 = this.game.power2Supply[playerId].items.length;
-             this.players[playerId].ressources.power3 = this.game.power3Supply[playerId].items.length;
+             player.ressources.power1 = this.game.power1Supply[playerId].items.length;
+             player.ressources.power2 = this.game.power2Supply[playerId].items.length;
+             player.ressources.power3 = this.game.power3Supply[playerId].items.length;
 
-             this.players[playerId].ressources.priests = this.game.priestsCollection[playerId].items.length;
-             this.players[playerId].supply.priests = this.game.priestSupply[playerId].items.length;
+             player.ressources.priests = this.game.priestsCollection[playerId].items.length;
+             player.supply.priests = this.game.priestSupply[playerId].items.length;
 
              // calculate the number of priest in cult
-             this.players[playerId].priests_in_cult = 0;
+             player.priests_in_cult = 0;
              for (var priestIdx in this.gamedatas.priests) {
                  var priest = this.gamedatas.priests[priestIdx];
                  if (priest.player_id == playerId && priest.cos_cult != null) {
-                     this.players[playerId].priests_in_cult += 1;
+                     player.priests_in_cult += 1;
                  }
              }
          }
@@ -322,8 +337,8 @@ var TMPlanner = {
             }
         }
 
-		if (Enable_Logging) console.log("Current turn: " + this.current_turn);
-		if (Enable_Logging) console.log("Players info:");
+        if (Enable_Logging) console.log("Current turn: " + this.current_turn);
+        if (Enable_Logging) console.log("Players info:");
         if (Enable_Logging) console.log(this.players);
     },
 
@@ -349,42 +364,6 @@ var TMPlanner = {
         for (var j=0; j < collapsers.length; j++) {
             this.dojo.connect(expanders[j], "onclick", this, "toggleCollapserExpander");
         }
-
-        this.renderPlayerPlannerMenu();
-        this.renderPlayerIncome();
-    },
-
-    getActionLimit: function(playerId, actionIdx) {
-        var faction = this.factions[this.players[playerId].faction];
-        var action = faction[actionIdx];
-        var limit = 15;
-        if (action.hasOwnProperty("limit")) {
-            limit = parseInt(action.limit);
-        }
-        if (this.players[playerId].supply.hasOwnProperty(actionIdx)) {
-            limit = parseInt(this.players[playerId].supply[actionIdx]);
-        }
-        if (this.players[playerId].built_structures.hasOwnProperty(actionIdx)) {
-            limit -= parseInt(this.players[playerId].built_structures[actionIdx]);
-        }
-        if (actionIdx == "temple" || actionIdx == "tradinghouse" || actionIdx == "dwelling") {
-            limit -= parseInt(this.players[playerId].built_structures.sanctuary);
-        }
-        if (actionIdx == "tradinghouse" || actionIdx == "dwelling") {
-            limit -= parseInt(this.players[playerId].built_structures.temple);
-            limit -= parseInt(this.players[playerId].built_structures.stronghold);
-        }
-        if (actionIdx == "dwelling") {
-            limit -= parseInt(this.players[playerId].built_structures.tradinghouse);
-        }
-
-        // hide action of some structure are built (e.g. hide 2W tunneling if dwarve stronghold is built)
-        if (action.hasOwnProperty("hide_with_structure")) {
-            if (parseInt(this.players[playerId].built_structures[action.hide_with_structure]) >= parseInt(action.hide_with_number)) {
-                limit = 0;
-            }
-        }
-        return limit;
     },
 
     // add income information directly on player panel
@@ -416,86 +395,122 @@ var TMPlanner = {
             this.game.addTooltipHtml("power_income_" + playerId, "power income");
             this.game.addTooltipHtml("spades_income_" + playerId, "spade income");
         }
-        this.computeIncome();
     },
 
     // render planner menu for each players
-    renderPlayerPlannerMenu: function() {
-        for (var playerId in this.players) {
-            var menuHtml = "<div id='divPlanning_" + playerId + "' >";
-            menuHtml += "<div class='TMPtab'>"
-            menuHtml += "<button class='TMPtablinks' id='radio_0_"+ playerId + "'>Current</button>";
-            menuHtml += "<button class='TMPtablinks' id='radio_1_"+ playerId + "'>Next round</button>";
-            menuHtml += "</div>"
-            menuHtml += "<table>";
-            var faction = this.factions[this.players[playerId].faction];
-            for (var actionIdx in faction) {
-                var action = faction[actionIdx];
-                var actName = action.name;
-                var limit = 15;
-                menuHtml += "<tr id='select_line_" + playerId + "_" + actionIdx + "'>";
-                menuHtml += "<td style='padding-top: 3px'>" + actName + ":</td>";
-                menuHtml += "<td style='padding-left: 10px; padding-top: 3px'><input type='number' class='select_TMP' value='0' min='0' max='" + limit + "' id='select_" + playerId + "_" + actionIdx + "' style='width: 3em'>";
-                menuHtml += "</select></td></tr>";
-            }
-            menuHtml += "</table>";
-            menuHtml += "<p></p>";
-            menuHtml += "<table>";
-            menuHtml += "<tr><td style='padding-top: 5px'><u>Needs:</u></td></tr>";
-            menuHtml += "<tr><td style='position: relative; top: -2px'>";
-            menuHtml += "<label id='workerCount_" + playerId + "' style='position: relative; left: 8px; top: 6px'>0</label><div class='workers_collection ttworkers' style='position: relative; top: 10px; width: 21px; height: 21px; background-size: 364px 42px; background-position: -21px 0px'></div>";
-            menuHtml += "<label id='coinCount_" + playerId + "' style='padding-left: 15px; position: relative; top: 6px'>0</label><div class='coins_icon tm_panel_icon ttcoins' style='position: relative; top: 10px'></div>";
-
-            var priestStyle = "<position: relative; background-size: 351px 450px; background-repeat: no-repeat; background-position: -301px -281px; width: 51px; height: 51px;";
-            var priestElem = document.getElementById("priests_collection_" + playerId);
-            if (!isObjectEmpty(priestElem)) {
-                priestStyle = priestElem.getAttribute('style');
-            }
-            menuHtml += "<label id='priestCount_" + playerId + "' style='padding-left: 2px; position: relative; left: 12px; top: 6px'>0</label><div class='priests_collection ttpriests' style='" + priestStyle + "'></div>";
-            menuHtml += "</td></tr>";
-            menuHtml += "</table>";
-            menuHtml += "<p></p>";
-            menuHtml += "<div  id='expectedScore_" + playerId + "'>";
-            menuHtml += "<label><u>Scoring:</u> +</label>";
-            menuHtml += "<label id='scoreLabel_" + playerId + "'>0</label>";
-            menuHtml += "<i class='fa fa-star'></i></div>";
-            menuHtml += "<br><label style='color:red' id='errorLabel_" + playerId + "'></label>";
-            this.dojo.place(menuHtml, "TMP_menu_content_" + playerId, "only");
-
-            var selects_tmp = this.dojo.query(".select_TMP", "TMP_menu_content_" + playerId);
-            for (var k=0; k < selects_tmp.length; k++) {
-                this.dojo.connect(selects_tmp[k], "onchange", this, "computeResourcesNeeded");
-            }
-            this.dojo.connect(document.getElementById("radio_0_"+ playerId), "onclick", this, "radioRoundSelected");
-            this.dojo.connect(document.getElementById("radio_1_"+ playerId), "onclick", this, "radioRoundSelected");
-            this.radioRoundSelected({"target": document.getElementById("radio_0_"+ playerId)});
+    renderPlayerPlannerMenu: function(playerId) {
+        var menuHtml = "<div id='divPlanning_" + playerId + "' >";
+        menuHtml += "<div class='TMPtab'>"
+        menuHtml += "<button class='TMPtablinks' id='radio_0_"+ playerId + "'>Current</button>";
+        menuHtml += "<button class='TMPtablinks' id='radio_1_"+ playerId + "'>Next round</button>";
+        menuHtml += "</div>"
+        menuHtml += "<table>";
+        var faction = this.factions[this.players[playerId].faction];
+        for (var actionIdx in faction) {
+            var action = faction[actionIdx];
+            var actName = action.name;
+            var limit = 15;
+            menuHtml += "<tr id='select_line_" + playerId + "_" + actionIdx + "'>";
+            menuHtml += "<td style='padding-top: 3px'>" + actName + ":</td>";
+            menuHtml += "<td style='padding-left: 10px; padding-top: 3px'><input type='number' class='select_TMP' value='0' min='0' max='" + limit + "' id='select_" + playerId + "_" + actionIdx + "' style='width: 3em'>";
+            menuHtml += "</select></td></tr>";
         }
-        this.updatePlayerPlannerMenu();
+        menuHtml += "</table>";
+        menuHtml += "<p></p>";
+        menuHtml += "<table>";
+        menuHtml += "<tr><td style='padding-top: 5px'><u>Needs:</u></td></tr>";
+        menuHtml += "<tr><td style='position: relative; top: -2px'>";
+        menuHtml += "<label id='workerCount_" + playerId + "' style='position: relative; left: 8px; top: 6px'>0</label><div class='workers_collection ttworkers' style='position: relative; top: 10px; width: 21px; height: 21px; background-size: 364px 42px; background-position: -21px 0px'></div>";
+        menuHtml += "<label id='coinCount_" + playerId + "' style='padding-left: 15px; position: relative; top: 6px'>0</label><div class='coins_icon tm_panel_icon ttcoins' style='position: relative; top: 10px'></div>";
+
+        var priestStyle = "<position: relative; background-size: 351px 450px; background-repeat: no-repeat; background-position: -301px -281px; width: 51px; height: 51px;";
+        var priestElem = document.getElementById("priests_collection_" + playerId);
+        if (!isObjectEmpty(priestElem)) {
+            priestStyle = priestElem.getAttribute('style');
+        }
+        menuHtml += "<label id='priestCount_" + playerId + "' style='padding-left: 2px; position: relative; left: 12px; top: 6px'>0</label><div class='priests_collection ttpriests' style='" + priestStyle + "'></div>";
+        menuHtml += "</td></tr>";
+        menuHtml += "</table>";
+        menuHtml += "<p></p>";
+        menuHtml += "<div  id='expectedScore_" + playerId + "'>";
+        menuHtml += "<label><u>Scoring:</u> +</label>";
+        menuHtml += "<label id='scoreLabel_" + playerId + "'>0</label>";
+        menuHtml += "<i class='fa fa-star'></i></div>";
+        menuHtml += "<br><label style='color:red' id='errorLabel_" + playerId + "'></label>";
+        this.dojo.place(menuHtml, "TMP_menu_content_" + playerId, "only");
+
+        var selects_tmp = this.dojo.query(".select_TMP", "TMP_menu_content_" + playerId);
+        for (var k=0; k < selects_tmp.length; k++) {
+            this.dojo.connect(selects_tmp[k], "onchange", this, "computeResourcesNeeded");
+        }
+        this.dojo.connect(document.getElementById("radio_0_"+ playerId), "onclick", this, "radioRoundSelected");
+        this.dojo.connect(document.getElementById("radio_1_"+ playerId), "onclick", this, "radioRoundSelected");
+        this.radioRoundSelected({"target": document.getElementById("radio_0_"+ playerId)});
+    },
+
+    getActionLimit: function(player, actionIdx) {
+        var faction = this.factions[player.faction];
+        var action = faction[actionIdx];
+        var limit = 15;
+        if (action.hasOwnProperty("limit")) {
+            limit = parseInt(action.limit);
+        }
+        if (player.supply.hasOwnProperty(actionIdx)) {
+            limit = parseInt(player.supply[actionIdx]);
+        }
+        if (player.built_structures.hasOwnProperty(actionIdx)) {
+            limit -= parseInt(player.built_structures[actionIdx]);
+        }
+        if (actionIdx == "temple" || actionIdx == "tradinghouse" || actionIdx == "dwelling") {
+            limit -= parseInt(player.built_structures.sanctuary);
+        }
+        if (actionIdx == "tradinghouse" || actionIdx == "dwelling") {
+            limit -= parseInt(player.built_structures.temple);
+            limit -= parseInt(player.built_structures.stronghold);
+        }
+        if (actionIdx == "dwelling") {
+            limit -= parseInt(player.built_structures.tradinghouse);
+        }
+
+        // hide action of some structure are built (e.g. hide 2W tunneling if dwarve stronghold is built)
+        if (action.hasOwnProperty("hide_with_structure")) {
+            if (parseInt(player.built_structures[action.hide_with_structure]) >= parseInt(action.hide_with_number)) {
+                limit = 0;
+            }
+        }
+        return limit;
     },
 
     updatePlayerPlannerMenu: function() {
         for (var playerId in this.players) {
-            var menuHtml = "<div id='divPlanning_" + playerId + "' >";
-            menuHtml += "<table>";
-            var faction = this.factions[this.players[playerId].faction];
+            var player = this.players[playerId];
+
+            // do nothing yet if players have no faction selected
+            if (!this.playerHasFaction(player)) {
+                return;
+            }
+
+            var faction = this.factions[player.faction];
             for (var actionIdx in faction) {
                 var action = faction[actionIdx];
                 var actName = action.name;
-                var limit = this.getActionLimit(playerId, actionIdx);
+                var limit = this.getActionLimit(player, actionIdx);
 
-                var elem = document.getElementById("select_" + playerId + "_" + actionIdx);
-                if (isObjectEmpty(elem)) {
-                    return;
-                }
-                elem.setAttribute("max", limit);
-                if (parseInt(elem.value) > limit) {
-                    elem.value = limit;
-                }
-                if (limit <= 0) {
-                    document.getElementById("select_line_" + playerId + "_" + actionIdx).setAttribute("class", "TMP_hidden");
+                if(!player.actions_limit.hasOwnProperty(actionIdx) || player.actions_limit[actionIdx] != limit) {
+                    player.actions_limit[actionIdx] = limit;
+                    var elem = document.getElementById("select_" + playerId + "_" + actionIdx);
+                    if (isObjectEmpty(elem)) {
+                        return;
+                    }
+                    elem.setAttribute("max", limit);
+                    if (parseInt(elem.value) > limit) {
+                        elem.value = limit;
+                    }
+                    if (limit <= 0) {
+                        document.getElementById("select_line_" + playerId + "_" + actionIdx).setAttribute("class", "TMP_hidden");
+                    }
                 }
             }
-            this.computeScoring(playerId);
         }
     },
 
@@ -505,17 +520,27 @@ var TMPlanner = {
         this.dojo.query(event.target.getAttribute('data-target')).toggleClass("TMP_hidden");
     },
 
+    playerHasFaction : function(player) {
+        return player.faction != null && this.factions.hasOwnProperty(player.faction);
+    },
+
     computeResourcesNeeded : function(event) {
         var selectId = event.target.getAttribute('id');
         var selectSplit = selectId.split("_");
         var playerId = parseInt(selectSplit[1]);
         var selectActionIdx = selectSplit[2];
+        var player = this.players[playerId];
+
+        // do nothing yet if players have no faction selected
+        if (!this.playerHasFaction(player)) {
+            return;
+        }
 
         // change value if not within range
         if (event.target.value < 0) {
             event.target.value = 0;
         }
-        var limit = this.getActionLimit(playerId, selectActionIdx);
+        var limit = this.getActionLimit(player, selectActionIdx);
         if (event.target.value > limit) {
             event.target.value = limit;
         }
@@ -523,7 +548,7 @@ var TMPlanner = {
         var nbWorkers = 0;
         var nbCoins = 0;
         var nbPriests = 0;
-        var faction = this.factions[this.players[playerId].faction];
+        var faction = this.factions[player.faction];
         for (var actionIdx in faction) {
             var elem = document.getElementById("select_" + playerId + "_" + actionIdx);
             if (!isObjectEmpty(elem)) {
@@ -566,12 +591,18 @@ var TMPlanner = {
 
     computeIncome : function() {
         for (var playerId in this.players) {
+             var player = this.players[playerId];
+
+            // do nothing yet if players have no faction selected
+            if (!this.playerHasFaction(player)) {
+                return;
+            }
             var income = {"income_worker": 0, "income_coin": 0, "income_priest": 0, "income_power": 0, "income_spade": 0};
-            var faction = this.factions[this.players[playerId].faction];
+            var faction = this.factions[player.faction];
             if (this.current_turn < 6) {
                 // compute income from structures
-                for(var structIdx in this.players[playerId].built_structures) {
-                    var structure_number = this.players[playerId].built_structures[structIdx];
+                for(var structIdx in player.built_structures) {
+                    var structure_number = player.built_structures[structIdx];
                     var extra_struct = 0;
                     if (structIdx == "dwelling") {
                         extra_struct = 1; // dwellings has an extra worker income for 0 structure
@@ -588,8 +619,8 @@ var TMPlanner = {
                 }
 
                 // compute income for favors tiles
-                for(var favorId in this.players[playerId].favors) {
-                    var favorIdx = this.players[playerId].favors[favorId];
+                for(var favorId in player.favors) {
+                    var favorIdx = player.favors[favorId];
                     if (TMPfavors.hasOwnProperty(favorIdx)) {
                         var favor = TMPfavors[favorIdx];
                         for (var incomeIdx2 in income) {
@@ -600,7 +631,7 @@ var TMPlanner = {
 
                 // compute income for bonus tile if player already passed
                 if (this.playerPassed(playerId)) {
-                    var bonusIdx = this.players[playerId].bonus_card;
+                    var bonusIdx = player.bonus_card;
                     if (TMPboni.hasOwnProperty(bonusIdx)) {
                         var bonus = TMPboni[bonusIdx];
                         for (var incomeIdx3 in income) {
@@ -614,9 +645,9 @@ var TMPlanner = {
                 var scoring = TMPscorings[scoringIdx];
                 var req_value = 0;
                 if (scoring.income_req == "priest") { //special case we need to count the number of priest in cult
-                    req_value = this.players[playerId].priests_in_cult;
+                    req_value = player.priests_in_cult;
                 } else {
-                    req_value = this.players[playerId].cult[scoring.income_req];
+                    req_value = player.cult[scoring.income_req];
                 }
                 var score_multiplier = Math.floor(req_value / parseInt(scoring.income_req_divider));
                 for (var i = 0; i < score_multiplier; i++) {
@@ -627,34 +658,49 @@ var TMPlanner = {
             }
 
             // update UI
-            if (isObjectEmpty(document.getElementById("workers_income_" + playerId))) {
-                return;
+            if (player.last_computed_income.income_worker != income.income_worker) {
+                player.last_computed_income.income_worker = income.income_worker;
+                document.getElementById("workers_income_" + playerId).innerHTML = " (" + income.income_worker + ")";
             }
-            document.getElementById("workers_income_" + playerId).innerHTML = " (" + income.income_worker + ")";
-            document.getElementById("coins_income_" + playerId).innerHTML = " (" + income.income_coin + ")";
-            document.getElementById("spades_income_" + playerId).innerHTML = " (" + income.income_spade + ")";
-
-            // check for priest overflow
-            if (this.players[playerId].supply.priests < income.income_priest) {
-                document.getElementById("priests_income_" + playerId).innerHTML = " <span style='color:red'>(" + income.income_priest + ")</span>";
-                this.game.addTooltipHtml("priests_income_" + playerId, "priest income<br><span style='color:red'>warning: not enough priest in supply to fullfill priest income.</span>");
-            } else {
-                document.getElementById("priests_income_" + playerId).innerHTML = " (" + income.income_priest + ")";
-                this.game.addTooltipHtml("priests_income_" + playerId, "priest income");
+            if (player.last_computed_income.income_coin != income.income_coin) {
+                player.last_computed_income.income_coin = income.income_coin;
+                document.getElementById("coins_income_" + playerId).innerHTML = " (" + income.income_coin + ")";
+            }
+            if (player.last_computed_income.income_spade != income.income_spade) {
+                player.last_computed_income.income_spade = income.income_spade;
+                document.getElementById("spades_income_" + playerId).innerHTML = " (" + income.income_spade + ")";
             }
 
-            // check for power overflow
-            var upgradablePower = (parseInt(this.players[playerId].ressources.power1) * 2) + parseInt(this.players[playerId].ressources.power2);
-            if (upgradablePower < income.income_power) {
-                document.getElementById("power_income_" + playerId).innerHTML = " <span style='color:red'>(" + income.income_power + ")</span>";
-                this.game.addTooltipHtml("power_income_" + playerId, "power income<br><span style='color:red'>warning: some power will be lost. You should spend some power before passing if possible.</span>");
-            } else {
-                document.getElementById("power_income_" + playerId).innerHTML = " (" + income.income_power + ")";
-                this.game.addTooltipHtml("power_income_" + playerId, "power income");
+            if (player.last_computed_income.income_priest != income.income_priest
+             || player.last_computed_income.supply_priest != player.supply.priests) {
+                player.last_computed_income.income_priest = income.income_priest;
+                player.last_computed_income.supply_priest = player.supply.priests;
+                // check for priest overflow
+                if (player.supply.priests < income.income_priest) {
+                    document.getElementById("priests_income_" + playerId).innerHTML = " <span style='color:red'>(" + income.income_priest + ")</span>";
+                    this.game.addTooltipHtml("priests_income_" + playerId, "priest income<br><span style='color:red'>warning: not enough priest in supply to fullfill priest income.</span>");
+                } else {
+                    document.getElementById("priests_income_" + playerId).innerHTML = " (" + income.income_priest + ")";
+                    this.game.addTooltipHtml("priests_income_" + playerId, "priest income");
+                }
+            }
+
+            var upgradablePower = (parseInt(player.ressources.power1) * 2) + parseInt(player.ressources.power2);
+            if (player.last_computed_income.income_power != income.income_power
+             || player.last_computed_income.supply_power != upgradablePower) {
+                player.last_computed_income.income_power = income.income_power;
+                player.last_computed_income.supply_power = upgradablePower;
+                // check for power overflow
+                if (upgradablePower < income.income_power) {
+                    document.getElementById("power_income_" + playerId).innerHTML = " <span style='color:red'>(" + income.income_power + ")</span>";
+                    this.game.addTooltipHtml("power_income_" + playerId, "power income<br><span style='color:red'>warning: some power will be lost. You should spend some power before passing if possible.</span>");
+                } else {
+                    document.getElementById("power_income_" + playerId).innerHTML = " (" + income.income_power + ")";
+                    this.game.addTooltipHtml("power_income_" + playerId, "power income");
+                }
             }
         }
     },
-
 
     radioRoundSelected : function(event) {
         if(isObjectEmpty(event.target)) {
@@ -689,11 +735,17 @@ var TMPlanner = {
         var VP = 0;
         var errorString = "";
         var detailString = "";
-        let existingBuildings = this.players[playerId].built_structures;
+        var player = this.players[playerId];
+        let existingBuildings = player.built_structures;
         var buildingsAfterActions = Object.assign({}, existingBuildings);
 
+        // do nothing yet if players have no faction selected
+        if (!this.playerHasFaction(player)) {
+            return;
+        }
+
         // check for which turn we are planning
-        var plannedTurn = this.players[playerId].plannedRound;
+        var plannedTurn = player.plannedRound;
         var playerPassed = this.playerPassed(playerId);
 
         if (playerPassed) { // plan next turn if player already passed
