@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.1.2
+// @version      1.2.0
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -445,7 +445,22 @@ var TMPlanner = {
         }
         this.dojo.connect(document.getElementById("radio_0_"+ playerId), "onclick", this, "radioRoundSelected");
         this.dojo.connect(document.getElementById("radio_1_"+ playerId), "onclick", this, "radioRoundSelected");
-        this.radioRoundSelected({"target": document.getElementById("radio_0_"+ playerId)});
+
+        // retrieve existing planned actions stored in local storage
+        var selectedRoundId = window.localStorage.getItem("TMPlanner_" + this.game.table_id + "_" + playerId + "_round");
+        if (selectedRoundId != null && selectedRoundId != "") {
+            this.radioRoundSelected({"target": document.getElementById(selectedRoundId)});
+        } else {
+            this.radioRoundSelected({"target": document.getElementById("radio_0_"+ playerId)});
+        }
+        var storedAction = this.retrievePlannedActionsForPlayer(playerId);
+        if (!isObjectEmpty(storedAction)) {
+            for (var actIdx in storedAction) {
+                var elem = document.getElementById("select_" + playerId + "_" + actIdx);
+                elem.value = storedAction[actIdx];
+                this.computeResourcesNeeded({"target": elem});
+            }
+        }
     },
 
     getActionLimit: function(player, actionIdx) {
@@ -539,6 +554,18 @@ var TMPlanner = {
         return plannedActions;
     },
 
+    storePlannedActionsForPlayer : function(playerId, plannedActions) {
+        window.localStorage.setItem("TMPlanner_" + this.game.table_id + "_" + playerId, JSON.stringify(plannedActions));
+    },
+
+    retrievePlannedActionsForPlayer : function(playerId) {
+        var json = window.localStorage.getItem("TMPlanner_" + this.game.table_id + "_" + playerId);
+        if (json != null && json != "") {
+            return JSON.parse(json);
+        }
+        return null;
+    },
+
     computeResourcesNeeded : function(event) {
         var selectId = event.target.getAttribute('id');
         var selectSplit = selectId.split("_");
@@ -576,6 +603,7 @@ var TMPlanner = {
         document.getElementById("coinCount_" + playerId).innerHTML = nbCoins;
         document.getElementById("priestCount_" + playerId).innerHTML = nbPriests;
 
+        this.storePlannedActionsForPlayer(playerId, plannedActions);
         this.computeScoring(playerId);
     },
 
@@ -587,7 +615,6 @@ var TMPlanner = {
                 res += parseInt(income[i]);
             }
         }
-
        return res;
     },
 
@@ -596,7 +623,6 @@ var TMPlanner = {
         if (action.hasOwnProperty(income_type)) {
             res += parseInt(action[income_type]);
         }
-
        return res;
     },
 
@@ -728,6 +754,7 @@ var TMPlanner = {
             other_radio.className = other_radio.className.replace(" active", "");
         }
         event.target.className += " active";
+        window.localStorage.setItem("TMPlanner_" + this.game.table_id + "_" + playerId + "_round", radioId);
 
         this.players[playerId].plannedRound = round;
         this.computeScoring(playerId);
