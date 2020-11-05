@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.2.0
+// @version      1.1.3
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -787,9 +787,14 @@ var TMPlanner = {
             var count = 0;
             if (tile.hasOwnProperty("passVP")) {
                 count = parseInt(buildingsAfterActions[building]);
-                if (tile.vp.length > count) {
-                    VPToAdd += parseInt(tile.vp[count]);
+                if (Array.isArray(tile.vp)) {
+                    if (tile.vp.length > count) {
+                        VPToAdd += parseInt(tile.vp[count]);
+                    }
+                } else {
+                    VPToAdd += parseInt(tile.vp)*count;
                 }
+
             } else {
                 count = plannedActions[building];
                 if (!isObjectEmpty(count)) {
