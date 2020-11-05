@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.1.3
+// @version      1.2.0
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -60,7 +60,7 @@ var TMPfactionsOverride = JSON.parse(`{
   "engineers": {
     "dwelling": {"worker": "1", "coin": "1", "income_worker": ["0","1","1","0","1","1","0","1","1"]},
     "tradinghouse": {"worker": "1", "coin": "2"},
-    "temple": {"worker": "1", "coin": "4", "income_priest": ["1","0","1"], "income_power": ["0","4","0"]},
+    "temple": {"worker": "1", "coin": "4", "income_priest": ["1","0","1"], "income_power": ["0","5","0"]},
     "stronghold": {"worker": "3", "coin": "6"},
     "sanctuary": {"worker": "3", "coin": "6"},
     "bridge": {"name": "Bridge", "worker": "2", "coin": "0", "priest": "0", "limit": "3"}
@@ -169,7 +169,6 @@ var TMPlanner = {
             player.supply = {};
             player.built_structures = {};
             player.favors = [];
-            player.plannedRound = 0;
             player.priests_in_cult = 0;
             player.actions_limit = {};
             player.last_computed_income = {"income_worker": 0, "income_coin": 0, "income_priest": 0, "income_power": 0, "income_spade": 0, "supply_priest": 0, "supply_power": 0};
@@ -401,64 +400,76 @@ var TMPlanner = {
     renderPlayerPlannerMenu: function(playerId) {
         var menuHtml = "<div id='divPlanning_" + playerId + "' >";
         menuHtml += "<div class='TMPtab'>"
-        menuHtml += "<button class='TMPtablinks' id='radio_0_"+ playerId + "'>Current</button>";
-        menuHtml += "<button class='TMPtablinks' id='radio_1_"+ playerId + "'>Next round</button>";
+        for (var i=1; i <= 6; i++) {
+            menuHtml += "<button class='TMPtablinks' id='radio_" + i + "_" + playerId + "'>R" + i + "</button>";
+        }
         menuHtml += "</div>"
-        menuHtml += "<table>";
-        var faction = this.factions[this.players[playerId].faction];
-        for (var actionIdx in faction) {
-            var action = faction[actionIdx];
-            var actName = action.name;
-            var limit = 15;
-            menuHtml += "<tr id='select_line_" + playerId + "_" + actionIdx + "'>";
-            menuHtml += "<td style='padding-top: 3px'>" + actName + ":</td>";
-            menuHtml += "<td style='padding-left: 10px; padding-top: 3px'><input type='number' class='select_TMP' value='0' min='0' max='" + limit + "' id='select_" + playerId + "_" + actionIdx + "' style='width: 3em'>";
-            menuHtml += "</select></td></tr>";
-        }
-        menuHtml += "</table>";
-        menuHtml += "<p></p>";
-        menuHtml += "<table>";
-        menuHtml += "<tr><td style='padding-top: 5px'><u>Needs:</u></td></tr>";
-        menuHtml += "<tr><td style='position: relative; top: -2px'>";
-        menuHtml += "<label id='workerCount_" + playerId + "' style='position: relative; left: 8px; top: 6px'>0</label><div class='workers_collection ttworkers' style='position: relative; top: 10px; width: 21px; height: 21px; background-size: 364px 42px; background-position: -21px 0px'></div>";
-        menuHtml += "<label id='coinCount_" + playerId + "' style='padding-left: 15px; position: relative; top: 6px'>0</label><div class='coins_icon tm_panel_icon ttcoins' style='position: relative; top: 10px'></div>";
 
-        var priestStyle = "<position: relative; background-size: 351px 450px; background-repeat: no-repeat; background-position: -301px -281px; width: 51px; height: 51px;";
-        var priestElem = document.getElementById("priests_collection_" + playerId);
-        if (!isObjectEmpty(priestElem)) {
-            priestStyle = priestElem.getAttribute('style');
+        for (var j=1; j <= 6; j++) {
+            menuHtml += "<div id='tab_" + j + "_" + playerId + "' class='TMPtabcontent'>";
+            menuHtml += "<table>";
+            var faction = this.factions[this.players[playerId].faction];
+            for (var actionIdx in faction) {
+                var action = faction[actionIdx];
+                var actName = action.name;
+                var limit = 15;
+                menuHtml += "<tr id='select_line_" + j + "_" + playerId + "_" + actionIdx + "'>";
+                menuHtml += "<td style='padding-top: 3px'>" + actName + ":</td>";
+                menuHtml += "<td style='padding-left: 10px; padding-top: 3px'><input type='number' class='select_TMP' value='0' min='0' max='" + limit + "' id='select_" + j + "_" + playerId + "_" + actionIdx + "' style='width: 3em'>";
+                menuHtml += "</select></td></tr>";
+            }
+            menuHtml += "</table>";
+            menuHtml += "<p></p>";
+            menuHtml += "<table>";
+            menuHtml += "<tr><td style='padding-top: 5px'><u>Needs:</u></td></tr>";
+            menuHtml += "<tr><td style='position: relative; top: -2px'>";
+            menuHtml += "<label id='workerCount_" + j + "_" + playerId + "' style='position: relative; left: 8px; top: 6px'>0</label><div class='workers_collection ttworkers' style='position: relative; top: 10px; width: 21px; height: 21px; background-size: 364px 42px; background-position: -21px 0px'></div>";
+            menuHtml += "<label id='coinCount_" + j + "_" + playerId + "' style='padding-left: 15px; position: relative; top: 6px'>0</label><div class='coins_icon tm_panel_icon ttcoins' style='position: relative; top: 10px'></div>";
+
+            var priestStyle = "<position: relative; background-size: 351px 450px; background-repeat: no-repeat; background-position: -301px -281px; width: 51px; height: 51px;";
+            var priestElem = document.getElementById("priests_collection_" + playerId);
+            if (!isObjectEmpty(priestElem)) {
+                priestStyle = priestElem.getAttribute('style');
+            }
+            menuHtml += "<label id='priestCount_" + j + "_" + playerId + "' style='padding-left: 2px; position: relative; left: 12px; top: 6px'>0</label><div class='priests_collection ttpriests' style='" + priestStyle + "'></div>";
+            menuHtml += "</td></tr>";
+            menuHtml += "</table>";
+            menuHtml += "<p></p>";
+            menuHtml += "<div  id='expectedScore_" + j + "_" + playerId + "'>";
+            menuHtml += "<label><u>Scoring:</u> +</label>";
+            menuHtml += "<label id='scoreLabel_" + j + "_" + playerId + "'>0</label>";
+            menuHtml += "<i class='fa fa-star'></i></div>";
+            menuHtml += "<br><label style='color:red' id='errorLabel_" + j + "_" + playerId + "'></label>";
+            menuHtml += "</div>";
         }
-        menuHtml += "<label id='priestCount_" + playerId + "' style='padding-left: 2px; position: relative; left: 12px; top: 6px'>0</label><div class='priests_collection ttpriests' style='" + priestStyle + "'></div>";
-        menuHtml += "</td></tr>";
-        menuHtml += "</table>";
-        menuHtml += "<p></p>";
-        menuHtml += "<div  id='expectedScore_" + playerId + "'>";
-        menuHtml += "<label><u>Scoring:</u> +</label>";
-        menuHtml += "<label id='scoreLabel_" + playerId + "'>0</label>";
-        menuHtml += "<i class='fa fa-star'></i></div>";
-        menuHtml += "<br><label style='color:red' id='errorLabel_" + playerId + "'></label>";
         this.dojo.place(menuHtml, "TMP_menu_content_" + playerId, "only");
 
         var selects_tmp = this.dojo.query(".select_TMP", "TMP_menu_content_" + playerId);
         for (var k=0; k < selects_tmp.length; k++) {
             this.dojo.connect(selects_tmp[k], "onchange", this, "computeResourcesNeeded");
         }
-        this.dojo.connect(document.getElementById("radio_0_"+ playerId), "onclick", this, "radioRoundSelected");
-        this.dojo.connect(document.getElementById("radio_1_"+ playerId), "onclick", this, "radioRoundSelected");
+
+        for (var r=1; r <= 6; r++) {
+            this.dojo.connect(document.getElementById("radio_" + r + "_"+ playerId), "onclick", this, "radioRoundSelected");
+        }
 
         // retrieve existing planned actions stored in local storage
-        var selectedRoundId = window.localStorage.getItem("TMPlanner_" + this.game.table_id + "_" + playerId + "_round");
+        var selectedRoundId = window.localStorage.getItem("TMPlanner_" + this.game.table_id + "_" + playerId + "_plannedround");
         if (selectedRoundId != null && selectedRoundId != "") {
             this.radioRoundSelected({"target": document.getElementById(selectedRoundId)});
         } else {
-            this.radioRoundSelected({"target": document.getElementById("radio_0_"+ playerId)});
+            var round = (!isObjectEmpty(this.current_turn) ? this.current_turn : 1);
+            this.radioRoundSelected({"target": document.getElementById("radio_" + round + "_"+ playerId)});
         }
-        var storedAction = this.retrievePlannedActionsForPlayer(playerId);
-        if (!isObjectEmpty(storedAction)) {
-            for (var actIdx in storedAction) {
-                var elem = document.getElementById("select_" + playerId + "_" + actIdx);
-                elem.value = storedAction[actIdx];
-                this.computeResourcesNeeded({"target": elem});
+
+        for (var l=1; l <= 6; l++) {
+            var storedAction = this.retrievePlannedActionsForPlayer(playerId, l);
+            if (!isObjectEmpty(storedAction)) {
+                for (var actIdx in storedAction) {
+                    var elem = document.getElementById("select_" + l + "_" + playerId + "_" + actIdx);
+                    elem.value = storedAction[actIdx];
+                    this.computeResourcesNeeded({"target": elem});
+                }
             }
         }
     },
@@ -513,16 +524,18 @@ var TMPlanner = {
 
                 if(!player.actions_limit.hasOwnProperty(actionIdx) || player.actions_limit[actionIdx] != limit) {
                     player.actions_limit[actionIdx] = limit;
-                    var elem = document.getElementById("select_" + playerId + "_" + actionIdx);
-                    if (isObjectEmpty(elem)) {
-                        return;
-                    }
-                    elem.setAttribute("max", limit);
-                    if (parseInt(elem.value) > limit) {
-                        elem.value = limit;
-                    }
-                    if (limit <= 0) {
-                        document.getElementById("select_line_" + playerId + "_" + actionIdx).setAttribute("class", "TMP_hidden");
+                    for (var r=1; r<= 6; r++) {
+                        var elem = document.getElementById("select_" + r + "_" + playerId + "_" + actionIdx);
+                        if (isObjectEmpty(elem)) {
+                            return;
+                        }
+                        elem.setAttribute("max", limit);
+                        if (parseInt(elem.value) > limit) {
+                            elem.value = limit;
+                        }
+                        if (limit <= 0) {
+                            document.getElementById("select_line_" + r + "_" + playerId + "_" + actionIdx).setAttribute("class", "TMP_hidden");
+                        }
                     }
                 }
             }
@@ -539,11 +552,11 @@ var TMPlanner = {
         return player.faction != null && this.factions.hasOwnProperty(player.faction);
     },
 
-    getPlannedActions : function(playerId) {
+    getPlannedActions : function(playerId, round) {
         var plannedActions = {};
         var faction = this.factions[this.players[playerId].faction];
         for (var actionIdx in faction) {
-            var elem = document.getElementById("select_" + playerId + "_" + actionIdx);
+            var elem = document.getElementById("select_" + round + "_" + playerId + "_" + actionIdx);
             if (!isObjectEmpty(elem)) {
                 var count = parseInt(elem.value);
                 if (count > 0) {
@@ -554,12 +567,12 @@ var TMPlanner = {
         return plannedActions;
     },
 
-    storePlannedActionsForPlayer : function(playerId, plannedActions) {
-        window.localStorage.setItem("TMPlanner_" + this.game.table_id + "_" + playerId, JSON.stringify(plannedActions));
+    storePlannedActionsForPlayer : function(playerId, round, plannedActions) {
+        window.localStorage.setItem("TMPlanner_" + this.game.table_id + "_" + round + "_" + playerId, JSON.stringify(plannedActions));
     },
 
-    retrievePlannedActionsForPlayer : function(playerId) {
-        var json = window.localStorage.getItem("TMPlanner_" + this.game.table_id + "_" + playerId);
+    retrievePlannedActionsForPlayer : function(playerId, round) {
+        var json = window.localStorage.getItem("TMPlanner_" + this.game.table_id + "_" + round + "_" + playerId);
         if (json != null && json != "") {
             return JSON.parse(json);
         }
@@ -569,8 +582,9 @@ var TMPlanner = {
     computeResourcesNeeded : function(event) {
         var selectId = event.target.getAttribute('id');
         var selectSplit = selectId.split("_");
-        var playerId = parseInt(selectSplit[1]);
-        var selectActionIdx = selectSplit[2];
+        var round = parseInt(selectSplit[1]);
+        var playerId = parseInt(selectSplit[2]);
+        var selectActionIdx = selectSplit[3];
         var player = this.players[playerId];
 
         // do nothing yet if players have no faction selected
@@ -591,7 +605,7 @@ var TMPlanner = {
         var nbCoins = 0;
         var nbPriests = 0;
         var faction = this.factions[player.faction];
-        var plannedActions = this.getPlannedActions(playerId);
+        var plannedActions = this.getPlannedActions(playerId, round);
         for (var actionIdx in plannedActions) {
             var count = plannedActions[actionIdx];
             var action = faction[actionIdx];
@@ -599,12 +613,12 @@ var TMPlanner = {
             nbCoins += action.coin*count;
             nbPriests += action.priest*count;
         }
-        document.getElementById("workerCount_" + playerId).innerHTML = nbWorkers;
-        document.getElementById("coinCount_" + playerId).innerHTML = nbCoins;
-        document.getElementById("priestCount_" + playerId).innerHTML = nbPriests;
+        document.getElementById("workerCount_" + round + "_" + playerId).innerHTML = nbWorkers;
+        document.getElementById("coinCount_" + round + "_" + playerId).innerHTML = nbCoins;
+        document.getElementById("priestCount_" + round + "_" + playerId).innerHTML = nbPriests;
 
-        this.storePlannedActionsForPlayer(playerId, plannedActions);
-        this.computeScoring(playerId);
+        this.storePlannedActionsForPlayer(playerId, round, plannedActions);
+        this.computeScoring(playerId, round);
     },
 
     computeStructureIncome : function(action, income_type, structure_number) {
@@ -746,18 +760,22 @@ var TMPlanner = {
         var radioId = event.target.getAttribute('id');
         var split = radioId.split("_");
         var round = parseInt(split[1]);
-        var other_round = 1-round;
         var playerId = split[2];
-        var other_radio_id = "radio_" + other_round + "_" + playerId;
-        var other_radio = document.getElementById(other_radio_id);
-        if(!isObjectEmpty(other_radio)) {
-            other_radio.className = other_radio.className.replace(" active", "");
-        }
-        event.target.className += " active";
-        window.localStorage.setItem("TMPlanner_" + this.game.table_id + "_" + playerId + "_round", radioId);
 
-        this.players[playerId].plannedRound = round;
-        this.computeScoring(playerId);
+        var i, tabcontent, tablinks;
+        tabcontent = event.target.parentElement.parentElement.getElementsByClassName("TMPtabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = event.target.parentElement.getElementsByClassName("TMPtablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById("tab_" + round + "_" + playerId).style.display = "block";
+        event.target.className += " active";
+
+        window.localStorage.setItem("TMPlanner_" + this.game.table_id + "_" + playerId + "_plannedround", radioId);
+        this.computeScoring(playerId, round);
     },
 
     playerPassed: function(playerId) {
@@ -767,17 +785,6 @@ var TMPlanner = {
             playerPassed = playerPassedElem.classList.contains("fp_container_passed");
         }
         return playerPassed;
-    },
-
-    getPlannedRound : function(playerId) {
-        var plannedRound = this.players[playerId].plannedRound;
-        if (this.playerPassed(playerId)) { // plan next turn if player already passed
-            plannedRound = 1;
-        }
-        if (this.current_turn == 6) { // can not plan next turn if it is last turn
-            plannedRound = 0;
-        }
-        return plannedRound;
     },
 
     computeScoreForTile: function(tile, plannedActions, buildingsAfterActions) {
@@ -805,7 +812,7 @@ var TMPlanner = {
         return VPToAdd;
     },
 
-    computeScoring: function(playerId) {
+    computeScoring: function(playerId, round) {
         var VP = 0;
         var errorString = "";
         var detailString = "";
@@ -818,12 +825,9 @@ var TMPlanner = {
             return;
         }
 
-        // check for which turn we are planning
-        var plannedRound = this.getPlannedRound(playerId);
-
         // compute score for actions
         var faction = this.factions[this.players[playerId].faction];
-        var plannedActions = this.getPlannedActions(playerId);
+        var plannedActions = this.getPlannedActions(playerId, round);
         for (var actionIdx in plannedActions) {
             var count = plannedActions[actionIdx];
             var action = faction[actionIdx];
@@ -870,7 +874,7 @@ var TMPlanner = {
         }
 
         // compute score for scoring tile
-        var scoringIdx = this.scoring_tiles[this.current_turn + plannedRound - 1];
+        var scoringIdx = this.scoring_tiles[round - 1];
         var scoring = TMPscorings[scoringIdx];
         var VPToAddSc = this.computeScoreForTile(scoring, plannedActions, buildingsAfterActions);
         if (VPToAddSc > 0) {
@@ -879,18 +883,21 @@ var TMPlanner = {
         }
 
         // compute score for bonus tile
-        var bonusIdx = this.players[playerId].bonus_card;
-        if (plannedRound == 1 && !this.playerPassed(playerId)) {
-            bonusIdx = 0; // we can not compute bonus tile if plan for next turn and player did not pass yet
+        var bonusRound = this.current_turn;
+        if (this.playerPassed(playerId)) {
+            bonusRound += 1;
         }
-        var bonus = TMPboni["1"];
-        if (TMPboni.hasOwnProperty(bonusIdx)) {
-            bonus = TMPboni[bonusIdx];
-        }
-        var VPToAddB = this.computeScoreForTile(bonus, plannedActions, buildingsAfterActions);
-        if (VPToAddB > 0) {
-            VP += VPToAddB;
-            detailString += VPToAddB + "VP for bonus tile \"" + bonus.name + "\"<br>";
+        if (bonusRound == round) { // we can not compute bonus tile if plan for next turn and player did not pass yet
+            var bonusIdx = this.players[playerId].bonus_card;
+            var bonus = TMPboni["1"];
+            if (TMPboni.hasOwnProperty(bonusIdx)) {
+                bonus = TMPboni[bonusIdx];
+            }
+            var VPToAddB = this.computeScoreForTile(bonus, plannedActions, buildingsAfterActions);
+            if (VPToAddB > 0) {
+                VP += VPToAddB;
+                detailString += VPToAddB + "VP for bonus tile \"" + bonus.name + "\"<br>";
+            }
         }
 
         // compute score for favors
@@ -909,9 +916,9 @@ var TMPlanner = {
         if (errorString !== "") {
             errorString = "<br>" + errorString;
         }
-        document.getElementById("scoreLabel_" + playerId).innerHTML = VP;
-        document.getElementById("errorLabel_" + playerId).innerHTML = errorString;
-        this.game.addTooltipHtml("expectedScore_" + playerId, detailString);
+        document.getElementById("scoreLabel_" + round + "_" + playerId).innerHTML = VP;
+        document.getElementById("errorLabel_" + round + "_" + playerId).innerHTML = errorString;
+        this.game.addTooltipHtml("expectedScore_" + round + "_" + playerId, detailString);
     },
 
     // Set CSS styles
@@ -932,7 +939,7 @@ var TMPlanner = {
 
             /* Style the buttons inside the tab */
             ".TMPtab button {" +
-            "width: 50%;" +
+            "width: 16%;" +
             "background-color: inherit;" +
             "float: left;" +
             "border: none;" +
@@ -950,6 +957,14 @@ var TMPlanner = {
             /* Create an active/current tablink class */
             ".TMPtab button.active {" +
             "background-color: #ccc;" +
+            "}" +
+
+            /* Style the tab content */
+            ".TMPtabcontent {" +
+            "  display: none;" +
+            "  padding: 6px 12px;" +
+            "  border: 1px solid #ccc;" +
+            "  border-top: none;" +
             "}" +
             "</style>", "overall-content", "first");
     }
