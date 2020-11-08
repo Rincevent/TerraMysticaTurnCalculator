@@ -306,7 +306,7 @@ var TMPlanner = {
              player.priests_in_cult = 0;
              for (var priestIdx in this.gamedatas.priests) {
                  var priest = this.gamedatas.priests[priestIdx];
-                 if (priest.player_id == playerId && priest.cos_cult != null) {
+                 if (priest.player_id == playerId && priest.cos_id != null) {
                      player.priests_in_cult += 1;
                  }
              }
