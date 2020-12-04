@@ -351,7 +351,7 @@ var TMPlanner = {
             menuHtml += "</div></p>";
             menuHtml += "<div class='menu_content TMP_hidden' id='TMP_menu_content_" + playerId + "'>";
             menuHtml += "</div></div>";
-            this.dojo.place(menuHtml, "player_faction_" + playerId, "after");
+            this.dojo.place(menuHtml, "player_board_" + playerId, "last");
         }
 
         // Expand & collapse menu handlers
@@ -423,8 +423,8 @@ var TMPlanner = {
             menuHtml += "<table>";
             menuHtml += "<tr><td style='padding-top: 5px'><u>Needs:</u></td></tr>";
             menuHtml += "<tr><td style='position: relative; top: -2px'>";
-            menuHtml += "<label id='workerCount_" + j + "_" + playerId + "' style='position: relative; left: 8px; top: 6px'>0</label><div class='workers_collection ttworkers' style='position: relative; top: 10px; width: 21px; height: 21px; background-size: 364px 42px; background-position: -21px 0px'></div>";
-            menuHtml += "<label id='coinCount_" + j + "_" + playerId + "' style='padding-left: 15px; position: relative; top: 6px'>0</label><div class='coins_icon tm_panel_icon ttcoins' style='position: relative; top: 10px'></div>";
+            menuHtml += "<label id='workerCount_" + j + "_" + playerId + "' style='position: relative; left: 8px; top: 6px'>0</label><div class='workers_collection ttworkers' style='position: relative; top: 10px; left: 10px; width: 21px; height: 21px; background-size: 364px 42px; background-position: -21px 0px'></div>";
+            menuHtml += "<label id='coinCount_" + j + "_" + playerId + "' style='padding-left: 15px; position: relative; top: 6px'>0</label><div class='coins_icon tm_panel_icon ttcoins' style='position: relative; top: 10px; left: 10px'></div>";
 
             var priestStyle = "<position: relative; background-size: 351px 450px; background-repeat: no-repeat; background-position: -301px -281px; width: 51px; height: 51px;";
             var priestElem = document.getElementById("priests_collection_" + playerId);
