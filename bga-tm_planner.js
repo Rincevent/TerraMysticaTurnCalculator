@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.2.0
+// @version      1.2.1
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -193,11 +193,11 @@ var TMPlanner = {
         this.buildFaction();
         this.updateView();
         this.renderTMPMenu();
-        this.renderPlayerIncome();
+        //this.renderPlayerIncome();
         this.setStyles();
 
         this.onFactionChosen();
-        this.computeIncome();
+        //this.computeIncome();
 
         // update state on events
         this.dojo.subscribe("dwellingPlaced", this, "onChange");
@@ -223,7 +223,7 @@ var TMPlanner = {
     onChange: function(event) {
         this.updateView();
         this.updatePlayerPlannerMenu();
-        this.computeIncome();
+        //this.computeIncome();
     },
 
     onFactionChosen: function(event) {
@@ -344,13 +344,14 @@ var TMPlanner = {
     // Render TMP planner accordeon
     renderTMPMenu: function() {
         for (var playerId in this.players) {
-            var menuHtml = "<div id='TMP_menu_" + playerId + "'>";
-            menuHtml += "<p><div id='TMP_menu_list_toggle_" + playerId + "' class='toggle_container'>";
-            menuHtml += "<a href='javascript:void(0)' class='collapser TMP_hidden' data-target='#TMP_menu_content_" + playerId + "'>-Plan</a>";
-            menuHtml += "<a href='javascript:void(0)' class='expander' data-target='#TMP_menu_content_" + playerId + "'>+Plan</a>";
-            menuHtml += "</div></p>";
-            menuHtml += "<div class='menu_content TMP_hidden' id='TMP_menu_content_" + playerId + "'>";
-            menuHtml += "</div></div>";
+            var menuHtml = "<div id='TMP_menu_list_toggle_" + playerId + "' class='toggle_container'>";
+            menuHtml += "<a href='javascript:void(0)' class='collapser TMP_hidden' data-target='#TMP_menu_content_" + playerId + "'>-P</a>";
+            menuHtml += "<a href='javascript:void(0)' class='expander' data-target='#TMP_menu_content_" + playerId + "'>+P</a>";
+            menuHtml += "</div>";
+            this.dojo.place(menuHtml, "player_name_" + playerId, "first");
+
+            menuHtml = "<div class='menu_content TMP_hidden' id='TMP_menu_content_" + playerId + "'>";
+            menuHtml += "</div>";
             this.dojo.place(menuHtml, "player_board_" + playerId, "last");
         }
 
