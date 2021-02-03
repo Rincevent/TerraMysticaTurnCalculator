@@ -124,7 +124,7 @@ var factions = JSON.parse(`{
     {"name": "Temple", "worker": "2", "coin": "5", "priest": "0", "limit": "4"},
     {"name": "Stronghold", "worker": "4", "coin": "6", "priest": "0", "limit": "1"},
     {"name": "Sanctuary", "worker": "4", "coin": "8", "priest": "0", "limit": "1"},
-    {"name": "Upgrade Dig", "worker": "2", "coin": "1", "priest": "1", "limit": "2"},
+    {"name": "Upgrade Dig", "worker": "2", "coin": "5", "priest": "1", "limit": "2"},
     {"name": "Upgrade Ship", "worker": "0", "coin": "4", "priest": "1", "limit": "4"},
     {"name": "Dig 1W", "worker": "1", "coin": "0", "priest": "0"},
     {"name": "Dig 2W", "worker": "2", "coin": "0", "priest": "0"},
