@@ -75,7 +75,7 @@ var TMPfactionsOverride = JSON.parse(`{
   "giants": {
     "stronghold": {"income_power": ["4"]}
   },
-  "Halflings": {
+  "halflings": {
     "stronghold": {"coin": "8"},
     "exchange": {"coin": "1"},
     "S1": {"vp": "1"},
