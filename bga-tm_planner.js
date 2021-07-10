@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.2.1
+// @version      1.3.0
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -193,11 +193,11 @@ var TMPlanner = {
         this.buildFaction();
         this.updateView();
         this.renderTMPMenu();
-        //this.renderPlayerIncome();
+        this.renderPlayerScore();
         this.setStyles();
 
         this.onFactionChosen();
-        //this.computeIncome();
+        this.computeFinalScore();
 
         // update state on events
         this.dojo.subscribe("dwellingPlaced", this, "onChange");
@@ -215,6 +215,10 @@ var TMPlanner = {
         this.dojo.subscribe("powerActionConvert", this, "onChange");
         this.dojo.subscribe("powerActionBridge", this, "onChange");
         this.dojo.subscribe("workersForPriests", this, "onChange");
+        this.dojo.subscribe("updateScore", this, "onChange" );
+        this.dojo.subscribe("playerPassed", this, "onChange" );
+        this.dojo.subscribe("townFounded", this, "onChange" );
+        this.dojo.subscribe("townBonus", this, "onChange" );
 
         this.dojo.subscribe("factionBoardChosen", this, "onFactionChosen");
         return this;
@@ -223,7 +227,7 @@ var TMPlanner = {
     onChange: function(event) {
         this.updateView();
         this.updatePlayerPlannerMenu();
-        //this.computeIncome();
+        this.computeFinalScore();
     },
 
     onFactionChosen: function(event) {
@@ -367,33 +371,11 @@ var TMPlanner = {
     },
 
     // add income information directly on player panel
-    renderPlayerIncome: function() {
+    renderPlayerScore: function() {
         for (var playerId in this.players) {
-            // reorganize stuff to have place for extra info
-            var workerIconElem = document.getElementById("workers_collection_" + playerId);
-            var wrkerCountElem = document.getElementById("workers_count_" + playerId);
-            if (isObjectEmpty(workerIconElem)) {
-                return;
-            }
-            if (isObjectEmpty(workerIconElem)) {
-                return;
-            }
-            this.dojo.place(workerIconElem, "coins_count_" + playerId, "after");
-            this.dojo.place(wrkerCountElem, "workers_collection_" + playerId, "after");
 
             // add new income info
-            this.dojo.place("<span id='workers_income_"+ playerId + "'> (0)</span><br>", "workers_count_" + playerId, "after");
-            this.dojo.place("<span id='coins_income_"+ playerId + "'> (0)</span>", "coins_count_" + playerId, "after");
-            this.dojo.place("<span id='priests_income_"+ playerId + "'> (0)</span>", "priests_count_" + playerId, "after");
-            this.dojo.place("<span id='spades_income_"+ playerId + "'> (0)</span>", "spades_count_" + playerId, "after");
-            this.dojo.place("<span id='power_income_"+ playerId + "'> (0)</span>", "power3_count_" + playerId, "after");
-
-            // add tooltips
-            this.game.addTooltipHtml("workers_income_" + playerId, "worker income");
-            this.game.addTooltipHtml("coins_income_" + playerId, "coin income");
-            this.game.addTooltipHtml("priests_income_" + playerId, "priest income");
-            this.game.addTooltipHtml("power_income_" + playerId, "power income");
-            this.game.addTooltipHtml("spades_income_" + playerId, "spade income");
+            this.dojo.place("<span id='player_final_score_"+ playerId + "'> (0)</span>", "player_score_" + playerId, "after");
         }
     },
 
@@ -641,116 +623,110 @@ var TMPlanner = {
        return res;
     },
 
-    computeIncome : function() {
+    computeArrayScore : function(arr, score_arr, added_score, tooltips, tootlip_name) {
+        // sort the array
+        var keys = Object.keys(arr);
+        var sorted = [];
+        for(var i = 0; i < keys.length; i++) {
+            sorted.push([keys[i], arr[keys[i]]]);
+        }
+        sorted.sort(function(first, second) {
+            return second[0] - first[0];
+        });
+
+        // add to score
+        var score_idx = 0;
+        for (let i = 0; i < sorted.length && score_idx < 3; i++) {
+            var players = sorted[i][1];
+            var score = 0;
+            for (let j = 0; j < players.length && score_idx < 3; j++) {
+                score += score_arr[score_idx];
+                ++score_idx;
+            }
+            score /= players.length;
+            for (let j = 0; j < players.length; j++) {
+                added_score[players[j]] += Math.floor(score);
+                tooltips[players[j]] += Math.floor(score) + "VP for " + tootlip_name + "<br>";
+            }
+        }
+        return added_score;
+    },
+
+    computeCurrentRound: function() {
+        for( var scoring_id = 1; scoring_id <= 6; scoring_id++ ) {
+            if (this.gamedatas.scoring_tiles[scoring_id].scoring_done == 0) {
+                return scoring_id;
+            }
+        }
+        return 6;
+    },
+
+    computeFinalScore : function() {
+
+        var cult_types = ["fire", "water", "earth", "air"];
+        var cults = {
+            "fire": {},
+            "water": {},
+            "earth": {},
+            "air": {}
+        };
+        var cult_score = [8, 4, 2];
+
+        var network = {};
+        var network_score = [18, 12, 6];
+
+        var added_score = {};
+        var tooltips = {};
+        var round = this.computeCurrentRound();
+
+        // collect player data
         for (var playerId in this.players) {
              var player = this.players[playerId];
 
-            // do nothing yet if players have no faction selected
-            if (!this.playerHasFaction(player)) {
-                return;
+            for (var cultIdx in cult_types) {
+                var cult = cult_types[cultIdx];
+                var cult_point = parseInt(this.gamedatas.players[playerId]['player_' + cult + 'cult']);
+                if (cult_point > 0) {
+                    if (cults[cult].hasOwnProperty (cult_point)) {
+                        cults[cult][cult_point].push(playerId);
+                    } else {
+                        cults[cult][cult_point] = [playerId];
+                    }
+                }
             }
-            var income = {"income_worker": 0, "income_coin": 0, "income_priest": 0, "income_power": 0, "income_spade": 0};
-            var faction = this.factions[player.faction];
-            if (this.current_turn < 6) {
-                // compute income from structures
-                for(var structIdx in player.built_structures) {
-                    var structure_number = player.built_structures[structIdx];
-                    var extra_struct = 0;
-                    if (structIdx == "dwelling") {
-                        extra_struct = 1; // dwellings has an extra worker income for 0 structure
-                    }
-                    if (faction.hasOwnProperty(structIdx)) {
-                        for (var incomeIdx1 in income) {
-                            var number = structure_number;
-                            if (incomeIdx1 == "income_worker") {
-                                number += extra_struct;
-                            }
-                            income[incomeIdx1] += this.computeStructureIncome(faction[structIdx], incomeIdx1, number);
-                        }
-                    }
-                }
 
-                // compute income for favors tiles
-                for(var favorId in player.favors) {
-                    var favorIdx = player.favors[favorId];
-                    if (TMPfavors.hasOwnProperty(favorIdx)) {
-                        var favor = TMPfavors[favorIdx];
-                        for (var incomeIdx2 in income) {
-                            income[incomeIdx2] += this.computeActionIncome(favor, incomeIdx2);
-                        }
-                    }
-                }
-
-                // compute income for bonus tile if player already passed
-                if (this.playerPassed(playerId)) {
-                    var bonusIdx = player.bonus_card;
-                    if (TMPboni.hasOwnProperty(bonusIdx)) {
-                        var bonus = TMPboni[bonusIdx];
-                        for (var incomeIdx3 in income) {
-                            income[incomeIdx3] += this.computeActionIncome(bonus, incomeIdx3);
-                        }
-                    }
-                }
-
-                // compute income from scoring tile
-                var scoringIdx = this.scoring_tiles[this.current_turn - 1];
-                var scoring = TMPscorings[scoringIdx];
-                var req_value = 0;
-                if (scoring.income_req == "priest") { //special case we need to count the number of priest in cult
-                    req_value = player.priests_in_cult;
+            var structure_count = parseInt(this.gamedatas.counters["structures_count_" + playerId].counter_value);
+            if (structure_count > 0) {
+                if (network.hasOwnProperty (structure_count)) {
+                    network[structure_count].push(playerId);
                 } else {
-                    req_value = player.cult[scoring.income_req];
-                }
-                var score_multiplier = Math.floor(req_value / parseInt(scoring.income_req_divider));
-                for (var i = 0; i < score_multiplier; i++) {
-                    for (var incomeIdx4 in income) {
-                        income[incomeIdx4] += this.computeActionIncome(scoring, incomeIdx4);
-                    }
+                    network[structure_count] = [playerId];
                 }
             }
 
-            // update UI
-            if (player.last_computed_income.income_worker != income.income_worker) {
-                player.last_computed_income.income_worker = income.income_worker;
-                document.getElementById("workers_income_" + playerId).innerHTML = " (" + income.income_worker + ")";
-            }
-            if (player.last_computed_income.income_coin != income.income_coin) {
-                player.last_computed_income.income_coin = income.income_coin;
-                document.getElementById("coins_income_" + playerId).innerHTML = " (" + income.income_coin + ")";
-            }
-            if (player.last_computed_income.income_spade != income.income_spade) {
-                player.last_computed_income.income_spade = income.income_spade;
-                document.getElementById("spades_income_" + playerId).innerHTML = " (" + income.income_spade + ")";
-            }
+            added_score[playerId] = parseInt(document.getElementById("player_score_" + playerId).innerHTML);
+            tooltips[playerId] = "";
 
-            if (player.last_computed_income.income_priest != income.income_priest
-             || player.last_computed_income.supply_priest != player.supply.priests) {
-                player.last_computed_income.income_priest = income.income_priest;
-                player.last_computed_income.supply_priest = player.supply.priests;
-                // check for priest overflow
-                if (player.supply.priests < income.income_priest) {
-                    document.getElementById("priests_income_" + playerId).innerHTML = " <span style='color:red'>(" + income.income_priest + ")</span>";
-                    this.game.addTooltipHtml("priests_income_" + playerId, "priest income<br><span style='color:red'>warning: not enough priest in supply to fullfill priest income.</span>");
-                } else {
-                    document.getElementById("priests_income_" + playerId).innerHTML = " (" + income.income_priest + ")";
-                    this.game.addTooltipHtml("priests_income_" + playerId, "priest income");
-                }
+            if (!this.playerPassed(playerId) || round < 6) {
+                var scoreInfo = this.computeScoringInternal(playerId, round);
+                added_score[playerId] += scoreInfo[0];
+                tooltips[playerId] = scoreInfo[2];
             }
+        }
 
-            var upgradablePower = (parseInt(player.ressources.power1) * 2) + parseInt(player.ressources.power2);
-            if (player.last_computed_income.income_power != income.income_power
-             || player.last_computed_income.supply_power != upgradablePower) {
-                player.last_computed_income.income_power = income.income_power;
-                player.last_computed_income.supply_power = upgradablePower;
-                // check for power overflow
-                if (upgradablePower < income.income_power) {
-                    document.getElementById("power_income_" + playerId).innerHTML = " <span style='color:red'>(" + income.income_power + ")</span>";
-                    this.game.addTooltipHtml("power_income_" + playerId, "power income<br><span style='color:red'>warning: some power will be lost. You should spend some power before passing if possible.</span>");
-                } else {
-                    document.getElementById("power_income_" + playerId).innerHTML = " (" + income.income_power + ")";
-                    this.game.addTooltipHtml("power_income_" + playerId, "power income");
-                }
-            }
+        // compute cult score
+        for (var cultIdx in cult_types) {
+            var cult = cult_types[cultIdx];
+            added_score = this.computeArrayScore(cults[cult], cult_score, added_score, tooltips, cult + " cult");
+        }
+
+        // compute network score
+        added_score = this.computeArrayScore(network, network_score, added_score, tooltips, "network");
+
+
+        for (var playerId in added_score) {
+            document.getElementById("player_final_score_" + playerId).innerHTML = " (" + added_score[playerId] + ")";
+            this.game.addTooltipHtml("player_final_score_" + playerId, "Calculated final score: " + "<br>" + tooltips[playerId]);
         }
     },
 
@@ -788,7 +764,7 @@ var TMPlanner = {
         return playerPassed;
     },
 
-    computeScoreForTile: function(tile, plannedActions, buildingsAfterActions) {
+    computeFinalScoreForTile: function(tile, plannedActions, buildingsAfterActions) {
         var VPToAdd = 0;
         for(var idF in tile.building) {
             var building = tile.building[idF];
@@ -813,7 +789,8 @@ var TMPlanner = {
         return VPToAdd;
     },
 
-    computeScoring: function(playerId, round) {
+    computeScoringInternal: function(playerId, round) {
+
         var VP = 0;
         var errorString = "";
         var detailString = "";
@@ -823,7 +800,7 @@ var TMPlanner = {
 
         // do nothing yet if players have no faction selected
         if (!this.playerHasFaction(player)) {
-            return;
+            return [0, "", ""];
         }
 
         // compute score for actions
@@ -877,7 +854,7 @@ var TMPlanner = {
         // compute score for scoring tile
         var scoringIdx = this.scoring_tiles[round - 1];
         var scoring = TMPscorings[scoringIdx];
-        var VPToAddSc = this.computeScoreForTile(scoring, plannedActions, buildingsAfterActions);
+        var VPToAddSc = this.computeFinalScoreForTile(scoring, plannedActions, buildingsAfterActions);
         if (VPToAddSc > 0) {
             VP += VPToAddSc;
             detailString += VPToAddSc + "VP for scoring tile \"" + scoring.name + "\"<br>";
@@ -894,7 +871,7 @@ var TMPlanner = {
             if (TMPboni.hasOwnProperty(bonusIdx)) {
                 bonus = TMPboni[bonusIdx];
             }
-            var VPToAddB = this.computeScoreForTile(bonus, plannedActions, buildingsAfterActions);
+            var VPToAddB = this.computeFinalScoreForTile(bonus, plannedActions, buildingsAfterActions);
             if (VPToAddB > 0) {
                 VP += VPToAddB;
                 detailString += VPToAddB + "VP for bonus tile \"" + bonus.name + "\"<br>";
@@ -906,7 +883,7 @@ var TMPlanner = {
             var favorIdx = this.players[playerId].favors[favorId];
             if (TMPfavors.hasOwnProperty(favorIdx)) {
                 var favor = TMPfavors[favorIdx];
-                var VPToAddF = this.computeScoreForTile(favor, plannedActions, buildingsAfterActions);
+                var VPToAddF = this.computeFinalScoreForTile(favor, plannedActions, buildingsAfterActions);
                 if (VPToAddF > 0) {
                     VP += VPToAddF;
                     detailString += VPToAddF + "VP for favor tile \"" + favor.name + "\"<br>";
@@ -917,9 +894,14 @@ var TMPlanner = {
         if (errorString !== "") {
             errorString = "<br>" + errorString;
         }
-        document.getElementById("scoreLabel_" + round + "_" + playerId).innerHTML = VP;
-        document.getElementById("errorLabel_" + round + "_" + playerId).innerHTML = errorString;
-        this.game.addTooltipHtml("expectedScore_" + round + "_" + playerId, detailString);
+        return [VP, errorString, detailString];
+    },
+
+    computeScoring: function(playerId, round) {
+        var scoreInfo = this.computeScoringInternal(playerId, round);
+        document.getElementById("scoreLabel_" + round + "_" + playerId).innerHTML = scoreInfo[0];
+        document.getElementById("errorLabel_" + round + "_" + playerId).innerHTML = scoreInfo[1];
+        this.game.addTooltipHtml("expectedScore_" + round + "_" + playerId, scoreInfo[2]);
     },
 
     // Set CSS styles
