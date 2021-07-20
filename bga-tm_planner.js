@@ -741,6 +741,8 @@ var TMPlanner = {
         var network = {};
         var network_score = [18, 12, 6];
 
+        var fi = {};
+
         var added_score = {};
         var tooltips = {};
         var round = this.computeCurrentRound();
@@ -770,6 +772,17 @@ var TMPlanner = {
                 }
             }
 
+            if (this.gamedatas.counters.hasOwnProperty("fire_ice_scoring_count_" + playerId)) {
+                var fi_count = parseInt(this.gamedatas.counters["fire_ice_scoring_count_" + playerId].counter_value);
+                if (fi_count > 0) {
+                    if (fi.hasOwnProperty (fi_count)) {
+                        fi[fi_count].push(playerId);
+                    } else {
+                        fi[fi_count] = [playerId];
+                    }
+                }
+            }
+
             added_score[playerId] = parseInt(document.getElementById("player_score_" + playerId).innerHTML);
             tooltips[playerId] = "";
 
@@ -789,6 +802,10 @@ var TMPlanner = {
         // compute network score
         added_score = this.computeArrayScore(network, network_score, added_score, tooltips, "network");
 
+        // compute F&I score
+        if (Object.keys(fi).length > 0) {
+            added_score = this.computeArrayScore(fi, network_score, added_score, tooltips, "F&I scoring");
+        }
 
         for (var playerId in added_score) {
             document.getElementById("player_final_score_" + playerId).innerHTML = " (" + added_score[playerId] + ")";
