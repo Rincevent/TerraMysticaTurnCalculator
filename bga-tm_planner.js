@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.3.0
+// @version      1.3.1
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -172,6 +172,7 @@ var TMPlanner = {
             player.priests_in_cult = 0;
             player.actions_limit = {};
             player.last_computed_income = {"income_worker": 0, "income_coin": 0, "income_priest": 0, "income_power": 0, "income_spade": 0, "supply_priest": 0, "supply_power": 0};
+            player.expanded = false;
         }
 
         // extract bonus tiles info
@@ -236,7 +237,6 @@ var TMPlanner = {
             var faction = this.gamedatas.players[playerId].faction;
             if (this.factions.hasOwnProperty(faction)) {
                 this.players[playerId].faction = this.gamedatas.players[playerId].faction;
-                this.renderPlayerPlannerMenu(playerId);
             }
         }
 
@@ -353,10 +353,6 @@ var TMPlanner = {
             menuHtml += "<a href='javascript:void(0)' class='expander' data-target='#TMP_menu_content_" + playerId + "'>+P</a>";
             menuHtml += "</div>";
             this.dojo.place(menuHtml, "player_name_" + playerId, "first");
-
-            menuHtml = "<div class='menu_content TMP_hidden' id='TMP_menu_content_" + playerId + "'>";
-            menuHtml += "</div>";
-            this.dojo.place(menuHtml, "player_board_" + playerId, "last");
         }
 
         // Expand & collapse menu handlers
@@ -381,6 +377,14 @@ var TMPlanner = {
 
     // render planner menu for each players
     renderPlayerPlannerMenu: function(playerId) {
+        var player = this.players[playerId];
+        if (this.dojo.exists('TMP_menu_content_' + playerId) || !this.playerHasFaction(player)) {
+            return;
+        }
+
+        var extraClass = player.expanded ? '' : ' TMP_hidden';
+        this.dojo.place("<div class='menu_content" + extraClass +"' id='TMP_menu_content_" + playerId + "'></div>", "player_board_" + playerId, "last");
+
         var menuHtml = "<div id='divPlanning_" + playerId + "' >";
         menuHtml += "<div class='TMPtab'>"
         for (var i=1; i <= 6; i++) {
@@ -391,7 +395,7 @@ var TMPlanner = {
         for (var j=1; j <= 6; j++) {
             menuHtml += "<div id='tab_" + j + "_" + playerId + "' class='TMPtabcontent'>";
             menuHtml += "<table>";
-            var faction = this.factions[this.players[playerId].faction];
+            var faction = this.factions[player.faction];
             for (var actionIdx in faction) {
                 var action = faction[actionIdx];
                 var actName = action.name;
@@ -492,6 +496,7 @@ var TMPlanner = {
 
     updatePlayerPlannerMenu: function() {
         for (var playerId in this.players) {
+            this.renderPlayerPlannerMenu(playerId);
             var player = this.players[playerId];
 
             // do nothing yet if players have no faction selected
@@ -527,8 +532,14 @@ var TMPlanner = {
 
     // Toggle hide / show of any visual element given data-target
     toggleCollapserExpander: function(event) {
+        var dataTarget = event.target.getAttribute('data-target');
         this.dojo.query(".collapser, .expander", event.target.parentNode).toggleClass("TMP_hidden");
-        this.dojo.query(event.target.getAttribute('data-target')).toggleClass("TMP_hidden");
+        this.dojo.query(dataTarget).toggleClass("TMP_hidden");
+
+        var arr = dataTarget.split("_");
+        var playerId = arr[arr.length - 1];
+        this.players[playerId].expanded = !this.players[playerId].expanded;
+        this.renderPlayerPlannerMenu(playerId);
     },
 
     playerHasFaction : function(player) {
@@ -602,6 +613,7 @@ var TMPlanner = {
 
         this.storePlannedActionsForPlayer(playerId, round, plannedActions);
         this.computeScoring(playerId, round);
+        this.computeFinalScore();
     },
 
     computeStructureIncome : function(action, income_type, structure_number) {
