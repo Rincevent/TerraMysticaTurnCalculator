@@ -191,6 +191,7 @@ var TMPlanner = {
     bonus_tiles: [],
     scoring_tiles: [],
     current_turn: 1,
+    score: 0,
 
     // Init TM turn planner
     init: function() {
@@ -413,6 +414,8 @@ var TMPlanner = {
 
     // add income information directly on player panel
     renderPlayerScore: function() {
+        if (this.score == 0)
+            return;
         for (var playerId in this.players) {
 
             // add new income info
@@ -445,10 +448,12 @@ var TMPlanner = {
                 var action = faction[actionIdx];
                 var actName = action.name;
                 var limit = 15;
-                menuHtml += "<tr id='select_line_" + j + "_" + playerId + "_" + actionIdx + "'>";
-                menuHtml += "<td style='padding-top: 3px'>" + actName + ":</td>";
-                menuHtml += "<td style='padding-left: 10px; padding-top: 3px'><input type='number' class='select_TMP' value='0' min='0' max='" + limit + "' id='select_" + j + "_" + playerId + "_" + actionIdx + "' style='width: 3em'>";
-                menuHtml += "</select></td></tr>";
+                if (this.score != 0 || actName != "Town") {
+                    menuHtml += "<tr id='select_line_" + j + "_" + playerId + "_" + actionIdx + "'>";
+                    menuHtml += "<td style='padding-top: 3px'>" + actName + ":</td>";
+                    menuHtml += "<td style='padding-left: 10px; padding-top: 3px'><input type='number' class='select_TMP' value='0' min='0' max='" + limit + "' id='select_" + j + "_" + playerId + "_" + actionIdx + "' style='width: 3em'>";
+                    menuHtml += "</select></td></tr>";
+                }
             }
             menuHtml += "</table>";
             menuHtml += "<p></p>";
@@ -466,13 +471,15 @@ var TMPlanner = {
             menuHtml += "<label id='priestCount_" + j + "_" + playerId + "' style='padding-left: 2px; position: relative; left: 12px; top: 6px'>0</label><div class='priests_collection ttpriests' style='" + priestStyle + "'></div>";
             menuHtml += "</td></tr>";
             menuHtml += "</table>";
-            menuHtml += "<p></p>";
-            menuHtml += "<div  id='expectedScore_" + j + "_" + playerId + "'>";
-            menuHtml += "<label><u>Scoring:</u> +</label>";
-            menuHtml += "<label id='scoreLabel_" + j + "_" + playerId + "'>0</label>";
-            menuHtml += "<i class='fa fa-star'></i></div>";
-            menuHtml += "<br><label style='color:red' id='errorLabel_" + j + "_" + playerId + "'></label>";
-            menuHtml += "</div>";
+            if (this.score != 0) {
+                menuHtml += "<p></p>";
+                menuHtml += "<div  id='expectedScore_" + j + "_" + playerId + "'>";
+                menuHtml += "<label><u>Scoring:</u> +</label>";
+                menuHtml += "<label id='scoreLabel_" + j + "_" + playerId + "'>0</label>";
+                menuHtml += "<i class='fa fa-star'></i></div>";
+                menuHtml += "<br><label style='color:red' id='errorLabel_" + j + "_" + playerId + "'></label>";
+                menuHtml += "</div>";
+            }
         }
         this.dojo.place(menuHtml, "TMP_menu_content_" + playerId, "only");
 
@@ -719,6 +726,8 @@ var TMPlanner = {
     },
 
     computeFinalScore : function() {
+        if (this.score == 0)
+        return;
 
         var cult_types = ["fire", "water", "earth", "air"];
         var cults = {
@@ -955,6 +964,8 @@ var TMPlanner = {
     },
 
     computeScoring: function(playerId, round) {
+        if (this.score == 0)
+            return;
         var scoreInfo = this.computeScoringInternal(playerId, round);
         document.getElementById("scoreLabel_" + round + "_" + playerId).innerHTML = scoreInfo[0];
         document.getElementById("errorLabel_" + round + "_" + playerId).innerHTML = scoreInfo[1];
