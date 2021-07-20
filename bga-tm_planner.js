@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.3.1
+// @version      1.4.0
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -100,6 +100,51 @@ var TMPfactionsOverride = JSON.parse(`{
   },
   "witches": {
     "town": {"vp": "5"}
+  },
+  "icemaidens": {
+    "stronghold": {"income_power": ["4"]},
+    "dwelling": {"income_worker": ["1","1","1","1","1","1","1","1","1"]},
+    "exchange": {"worker": "1"}
+  },
+  "yetis": {
+    "stronghold": {"income_power": ["4"]},
+    "tradinghouse": {"income_power": ["2","2","2","2"]},
+    "dwelling": {"income_worker": ["1","1","1","1","1","1","1","1","1"]},
+    "exchange": {"worker": "1"}
+  },
+  "acolytes": {
+    "stronghold": {"coin": "8"},
+    "sanctuary": {"coin": "8"},
+    "exchange": {"remove": "1"},
+    "S1": {"remove": "1"},
+    "S2": {"remove": "1"},
+    "S3": {"remove": "1"},
+    "dwelling": {"income_worker": ["0","1","1","1","0","1","1","1","0"]}
+  },
+  "dragonlords": {
+    "stronghold": {"coin": "8"},
+    "sanctuary": {"coin": "8"},
+    "exchange": {"remove": "1"},
+    "S1": {"remove": "1"},
+    "S2": {"remove": "1"},
+    "S3": {"remove": "1"},
+    "dwelling": {"income_worker": ["0","1","1","1","0","1","1","1","0"]}
+  },
+  "riverwalkers": {
+    "exchange": {"remove": "1"},
+    "shipping": {"remove": "1"},
+    "S1": {"remove": "1"},
+    "S2": {"remove": "1"},
+    "S3": {"remove": "1"},
+    "temple": {"income_priest": ["1","0","1"], "income_power": ["0","5","0"]},
+    "dwelling": {"income_worker": ["1","1","1","0","1","1","0","1","1"]}
+  },
+  "shapeshifters": {
+    "stronghold": {"worker": "3", "income_power": ["4"]},
+    "tradinghouse": {"income_power": ["2","2","2","2"]},
+    "exchange": {"remove": "1"},
+    "S1": {"remove": "1"},
+    "S2": {"remove": "1"}
   }
 }`);
 
@@ -996,7 +1041,7 @@ window.onload = async function() {
     if (Is_Inside_Game) {
         setTimeout(() => { // Wait for BGA to load dojo and TM scripts
             if (!window.parent || !window.parent.gameui || !window.parent.gameui.game_name ||
-                window.parent.gameui.game_name != "terramystica") {
+                (window.parent.gameui.game_name != "terramystica" && window.parent.gameui.game_name != "terramysticaext")) {
                 return;
             }
             waitForTMLoading(() => {
