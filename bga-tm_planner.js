@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.4.0
+// @version      1.5.0
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -14,172 +14,80 @@
 const Is_Inside_Game = /\?table=[0-9]*/.test(window.location.href);
 const Enable_Logging = false;
 
+
 var TMPcommonActions = JSON.parse(`{
-  "dwelling": {"name": "Dwelling", "worker": "1", "coin": "2", "priest": "0", "limit": "17", "max": "8", "income_worker": ["1","1","1","1","1","1","1","1","0"]},
-  "tradinghouse": {"name": "Trading Post", "worker": "2", "coin": "3", "priest": "0", "upgrade": "dwelling", "limit": "9", "max": "4", "income_coin": ["2","2","2","2"], "income_power": ["1","1","2","2"]},
-  "temple": {"name": "Temple", "worker": "2", "coin": "5", "priest": "0", "limit": "4", "upgrade": "tradinghouse", "max": "3", "income_priest": ["1","1","1"]},
-  "stronghold": {"name": "Stronghold", "worker": "4", "coin": "6", "priest": "0", "limit": "1", "upgrade": "tradinghouse", "max": "1", "income_power": ["2"]},
-  "sanctuary": {"name": "Sanctuary", "worker": "4", "coin": "6", "priest": "0", "limit": "1", "upgrade": "temple", "max": "1", "income_priest": ["1"]},
-  "exchange": {"name": "Upgrade Spade", "worker": "2", "coin": "5", "priest": "1", "vp": "6", "limit": "2", "max": "2"},
-  "shipping": {"name": "Upgrade Ship", "worker": "0", "coin": "4", "priest": "1", "vp": ["2", "3", "4"], "limit": "3", "max": "3"},
-  "S1": {"name": "Spade 1W", "worker": "1", "coin": "0", "priest": "0"},
-  "S2": {"name": "Spade 2W", "worker": "2", "coin": "0", "priest": "0", "limit": "9", "hide_with_structure": "exchange", "hide_with_number": "2"},
-  "S3": {"name": "Spade 3W", "worker": "3", "coin": "0", "priest": "0", "limit": "9", "hide_with_structure": "exchange", "hide_with_number": "1"},
-  "town": {"name": "Town", "worker": "0", "coin": "0", "priest": "0", "limit": "4"}
+  "dwelling": {"name": "Dwelling", "workers": "1", "coins": "2", "priests": "0", "limit": "17", "max": "8"},
+  "tradinghouse": {"name": "Trading Post", "workers": "2", "coins": "3", "priests": "0", "upgrade": "dwelling", "limit": "9", "max": "4"},
+  "temple": {"name": "Temple", "workers": "2", "coins": "5", "priests": "0", "limit": "4", "upgrade": "tradinghouse", "max": "3"},
+  "stronghold": {"name": "Stronghold", "workers": "4", "coins": "6", "priests": "0", "limit": "1", "upgrade": "tradinghouse", "max": "1"},
+  "sanctuary": {"name": "Sanctuary", "workers": "4", "coins": "6", "priests": "0", "limit": "1", "upgrade": "temple", "max": "1"},
+  "exchangetrack": {"name": "Upgrade Dig", "workers": "2", "coins": "5", "priests": "1", "vp": "6", "limit": "2", "max": "2"},
+  "shippingtrack": {"name": "Upgrade Ship", "workers": "0", "coins": "4", "priests": "1", "vp": ["2", "3", "4"], "limit": "3", "max": "3"},
+  "exchangetrack-3": {"name": "Spade 1W", "workers": "1", "coins": "0", "priests": "0", "vp": "0"},
+  "exchangetrack-2": {"name": "Spade 2W", "workers": "2", "coins": "0", "priests": "0", "vp": "0", "limit": "9", "hide_with_structure": "exchangetrack", "hide_with_number": "2"},
+  "exchangetrack-1": {"name": "Spade 3W", "workers": "3", "coins": "0", "priests": "0", "vp": "0", "limit": "9", "hide_with_structure": "exchangetrack", "hide_with_number": "1"},
+  "town": {"name": "Town", "workers": "0", "coins": "0", "priests": "0", "limit": "4"}
 }`);
 var TMPfactionsOverride = JSON.parse(`{
-  "alchemists": {
-    "tradinghouse": {"income_coin": ["2","2","3","4"], "income_power": ["1","1","1","1"]},
-    "stronghold": {"income_power": ["0"], "income_coin": ["6"]}
-  },
-  "auren": {
-    "sanctuary": {"coin": "8"}
-  },
-  "chaosmagicians": {
-    "stronghold": {"coin": "4", "income_power": ["0"], "income_worker": ["2"]},
-    "sanctuary": {"coin": "8"}
-  },
-  "cultists": {
-    "stronghold": {"coin": "8"},
-    "sanctuary": {"coin": "8"}
-  },
-  "darklings": {
-    "sanctuary": {"coin": "10", "income_priest": ["2"]},
-    "exchange": {"remove": "1"},
-    "S1": {"remove": "1"},
-    "S2": {"remove": "1"},
-    "S3": {"remove": "1"},
-    "SP": {"name": "Spade", "worker": "0", "coin": "0", "priest": "1", "vp": "2"}
-  },
   "dwarves": {
-    "tradinghouse": {"income_coin": ["3","2","2","3"]},
-    "shipping": {"remove": "1"},
-    "T1": {"name": "Tunneling 1W", "worker": "1", "coin": "0", "priest": "0", "vp": "4"},
-    "T2": {"name": "Tunneling 2W", "worker": "2", "coin": "0", "priest": "0", "vp": "4", "hide_with_structure": "stronghold", "hide_with_number": "1"}
+    "shippingtrack": {"remove": "1"},
+    "T1": {"name": "Tunneling 1W", "workers": "1", "coins": "0", "priests": "0", "vp": "4"},
+    "T2": {"name": "Tunneling 2W", "workers": "2", "coins": "0", "priests": "0", "vp": "4", "hide_with_structure": "stronghold", "hide_with_number": "1"}
   },
   "engineers": {
-    "dwelling": {"worker": "1", "coin": "1", "income_worker": ["0","1","1","0","1","1","0","1","1"]},
-    "tradinghouse": {"worker": "1", "coin": "2"},
-    "temple": {"worker": "1", "coin": "4", "income_priest": ["1","0","1"], "income_power": ["0","5","0"]},
-    "stronghold": {"worker": "3", "coin": "6"},
-    "sanctuary": {"worker": "3", "coin": "6"},
-    "bridge": {"name": "Bridge", "worker": "2", "coin": "0", "priest": "0", "limit": "3"}
+    "bridge": {"name": "Bridge", "workers": "2", "coins": "0", "priests": "0", "limit": "3"}
   },
   "fakirs": {
-    "S1": {"remove": "1"},
-    "stronghold": {"coin": "10", "income_power": ["0"], "income_priest": ["1"]},
-    "shipping": {"remove": "1"},
-    "exchange": {"limit": "1"},
-    "CF": {"name": "Carpet flight", "worker": "0", "coin": "0", "priest": "1", "vp": "4"}
-  },
-  "giants": {
-    "stronghold": {"income_power": ["4"]}
-  },
-  "halflings": {
-    "stronghold": {"coin": "8"},
-    "exchange": {"coin": "1"},
-    "S1": {"vp": "1"},
-    "S2": {"vp": "1"},
-    "S3": {"vp": "1"}
+    "exchangetrack-3": {"remove": "1"},
+    "shippingtrack": {"remove": "1"},
+    "exchangetrack": {"limit": "1"},
+    "CF": {"name": "Carpet flight", "workers": "0", "coins": "0", "priests": "1", "vp": "4"}
   },
   "mermaids": {
-    "stronghold": {"income_power": ["4"]},
-    "sanctuary": {"coin": "8"},
-    "shipping": {"vp": ["0", "2", "3", "4", "5"], "limit": "5", "max": "5"}
-  },
-  "nomads": {
-    "tradinghouse": {"income_coin": ["2","2","3","4"], "income_power": ["1","1","1","1"]},
-    "stronghold": {"coin": "8"}
-  },
-  "swarmlings": {
-    "dwelling": {"worker": "2", "coin": "3", "income_worker": ["2","1","1","1","1","1","1","1","0"]},
-    "tradinghouse": {"worker": "3", "coin": "4", "income_coin": ["2","2","2","3"], "income_power": ["2","2","2","2"]},
-    "temple": {"worker": "3", "coin": "6"},
-    "stronghold": {"worker": "5", "coin": "8", "income_power": ["4"]},
-    "sanctuary": {"worker": "5", "coin": "8", "income_priest": ["2"]}
+    "shippingtrack": {"vp": ["0", "2", "3", "4", "5"], "limit": "5", "max": "5"}
   },
   "witches": {
     "town": {"vp": "5"}
   },
-  "icemaidens": {
-    "stronghold": {"income_power": ["4"]},
-    "dwelling": {"income_worker": ["1","1","1","1","1","1","1","1","1"]},
-    "exchange": {"worker": "1"}
-  },
-  "yetis": {
-    "stronghold": {"income_power": ["4"]},
-    "tradinghouse": {"income_power": ["2","2","2","2"]},
-    "dwelling": {"income_worker": ["1","1","1","1","1","1","1","1","1"]},
-    "exchange": {"worker": "1"}
-  },
   "acolytes": {
-    "stronghold": {"coin": "8"},
-    "sanctuary": {"coin": "8"},
-    "exchange": {"remove": "1"},
-    "S1": {"remove": "1"},
-    "S2": {"remove": "1"},
-    "S3": {"remove": "1"},
-    "dwelling": {"income_worker": ["0","1","1","1","0","1","1","1","0"]}
+    "exchangetrack-1": {"remove": "1"}
   },
   "dragonlords": {
-    "stronghold": {"coin": "8"},
-    "sanctuary": {"coin": "8"},
-    "exchange": {"remove": "1"},
-    "S1": {"remove": "1"},
-    "S2": {"remove": "1"},
-    "S3": {"remove": "1"},
-    "dwelling": {"income_worker": ["0","1","1","1","0","1","1","1","0"]}
+    "exchangetrack-1": {"remove": "1"}
   },
   "riverwalkers": {
-    "exchange": {"remove": "1"},
-    "shipping": {"remove": "1"},
-    "S1": {"remove": "1"},
-    "S2": {"remove": "1"},
-    "S3": {"remove": "1"},
-    "temple": {"income_priest": ["1","0","1"], "income_power": ["0","5","0"]},
-    "dwelling": {"income_worker": ["1","1","1","0","1","1","0","1","1"]}
+    "shippingtrack": {"remove": "1"},
+    "exchangetrack-1": {"remove": "1"}
   },
-  "shapeshifters": {
-    "stronghold": {"worker": "3", "income_power": ["4"]},
-    "tradinghouse": {"income_power": ["2","2","2","2"]},
-    "exchange": {"remove": "1"},
-    "S1": {"remove": "1"},
-    "S2": {"remove": "1"}
+  "golddiggers": {
+    "exchangetrack-2": {"name": "Spade", "workers": "0", "coins": "3", "priests": "0", "vp": "1", "limit": "20", "hide_with_no_structure": "stronghold"},
+    "exchangetrack-1": {"name": "Spade", "hide_with_structure": "stronghold", "hide_with_number": "1"}
   }
 }`);
 
 var TMPboni = JSON.parse(`{
-  "1" : {"name": "income 1 priest", "building": [], "vp": "0", "income_priest": 1},
-  "2" : {"name": "income 1 worker 3 powers", "building": [], "vp": "0", "income_worker": 1, "income_power": 3},
-  "3" : {"name": "income 4 coins", "building": [], "vp": "0", "income_coin": 6},
-  "4" : {"name": "income 3 powers", "building": [], "vp": "0", "income_power": 3},
-  "5" : {"name": "income 2 coins", "building": [], "vp": "0", "income_coin": 2},
-  "6" : {"name": "income 4 coins", "building": [], "vp": "0", "income_coin": 4},
-  "7" : {"name": "1VP per pass Dwelling", "building": ["dwelling"], "vp": "1", "passVP": "true", "income_coin": 2},
-  "8" : {"name": "2VP per pass TP", "building": ["tradinghouse"], "vp": "2", "passVP": "true", "income_worker": 1},
-  "9" : {"name": "4VP per pass SH/SA", "building": ["stronghold", "sanctuary"], "vp": "4", "passVP": "true", "income_worker": 2},
-  "10" : {"name": "3VP per pass Ship", "building": ["shipping"], "vp": "3", "passVP": "true", "income_power": 3}
+  "7" : {"name": "1VP per pass Dwelling", "building": ["dwelling"], "vp": "1", "passVP": "true"},
+  "8" : {"name": "2VP per pass TP", "building": ["tradinghouse"], "vp": "2", "passVP": "true"},
+  "9" : {"name": "4VP per pass SH/SA", "building": ["stronghold", "sanctuary"], "vp": "4", "passVP": "true"},
+  "10" : {"name": "3VP per pass Ship", "building": ["shippingtrack"], "vp": "3", "passVP": "true"}
 }`);
 
 var TMPfavors = JSON.parse(`{
-  "7" : {"name": "income 1 power 1 worker", "building": [], "vp": "0", "income_worker": 1, "income_power": 1},
-  "8" : {"name": "income 4 powers", "building": [], "vp": "0", "income_power": 4},
-  "9" : {"name": "income 3 coins", "building": [], "vp": "0", "income_coin": 3},
   "10" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3"},
   "11" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2"},
   "12" : {"name": "2/3/4VP per pass TP", "building": ["tradinghouse"], "vp": ["0", "2", "3", "3", "4"], "passVP": "true"}
 }`);
 
 var TMPscorings = JSON.parse(`{
-  "1" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2", "income_req": "water", "income_req_divider": "4", "income_priest": 1},
-  "2" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2", "income_req": "fire", "income_req_divider": "4", "income_power": 4},
-  "3" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3", "income_req": "air", "income_req_divider": "4", "income_spade": 1},
-  "4" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3", "income_req": "water", "income_req_divider": "4", "income_spade": 1},
-  "5" : {"name": "5VP per SH/SA", "building": ["stronghold", "sanctuary"], "vp": "5", "income_req": "air", "income_req_divider": "2", "income_worker": 1},
-  "6" : {"name": "5VP per SH/SA", "building": ["stronghold", "sanctuary"], "vp": "5", "income_req": "fire", "income_req_divider": "2", "income_worker": 1},
-  "7" : {"name": "2VP per spade", "building": ["S1", "S2", "S3", "SP"], "vp": "2", "income_req": "earth", "income_req_divider": "1", "income_coin": 1},
-  "8" : {"name": "5VP per Town", "building": ["town"], "vp": "5", "income_req": "earth", "income_req_divider": "4", "income_spade": 1},
-  "9" : {"name": "4VP per Temple", "building": ["temple"], "vp": "4", "income_req": "priest", "income_req_divider": "1", "income_coin": 2}
+  "1" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2"},
+  "2" : {"name": "2VP per Dwelling", "building": ["dwelling"], "vp": "2"},
+  "3" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3"},
+  "4" : {"name": "3VP per Trading Post", "building": ["tradinghouse"], "vp": "3"},
+  "5" : {"name": "5VP per SH/SA", "building": ["stronghold", "sanctuary"], "vp": "5"},
+  "6" : {"name": "5VP per SH/SA", "building": ["stronghold", "sanctuary"], "vp": "5"},
+  "7" : {"name": "2VP per spade", "building": ["exchangetrack-1", "exchangetrack-2", "exchangetrack-3"], "vp": "2"},
+  "8" : {"name": "5VP per Town", "building": ["town"], "vp": "5"},
+  "9" : {"name": "4VP per Temple", "building": ["temple"], "vp": "4"}
 }`);
 
 // Main TM planner object
@@ -217,7 +125,6 @@ var TMPlanner = {
             player.favors = [];
             player.priests_in_cult = 0;
             player.actions_limit = {};
-            player.last_computed_income = {"income_worker": 0, "income_coin": 0, "income_priest": 0, "income_power": 0, "income_spade": 0, "supply_priest": 0, "supply_power": 0};
             player.expanded = false;
         }
 
@@ -290,29 +197,70 @@ var TMPlanner = {
     },
 
     buildFaction: function() {
-        // get the common action for player factions and override with specific faction info when needed
-        for(var faction in TMPfactionsOverride) {
-            var overrides = TMPfactionsOverride[faction];
-            this.factions[faction] = {};
+
+        var ressources = ["workers", "coins", "priests"];
+
+        // get the data from the game
+        for(var faction_type in this.gamedatas.factions) {
+            var faction = this.gamedatas.factions[faction_type];
+            this.factions[faction_type] = {};
             for(var action in TMPcommonActions) {
                 var data = TMPcommonActions[action];
-                this.factions[faction][action] = {};
+                this.factions[faction_type][action] = {};
                 for(var key in data) {
                     var value = data[key];
-                    this.factions[faction][action][key] = value;
+                    this.factions[faction_type][action][key] = value;
+                }
+
+                for(var ressourceIdx in ressources) {
+                    var ressource = ressources[ressourceIdx];
+                    var cost_name = action.replace('-', '_') + "_" + ressource + "_reduced_cost";
+                    if (faction.hasOwnProperty(cost_name)) {
+                        this.factions[faction_type][action][ressource] = faction[cost_name];
+                    } else {
+                        var cost_name = action.replace('-', '_') + "_" + ressource + "_cost";
+                        if (faction.hasOwnProperty(cost_name)) {
+                            this.factions[faction_type][action][ressource] = faction[cost_name];
+                        } else {
+                            this.factions[faction_type][action][ressource] = 0;
+                        }
+                    }
                 }
             }
-            for (var actionO in overrides) {
-                var dataO = overrides[actionO];
-                for(var keyO in dataO) {
-                    var valueO = dataO[keyO];
-                    if (keyO == "remove") {
-                        delete this.factions[faction][actionO];
-                    } else {
-                        if(!this.factions[faction].hasOwnProperty(actionO)) {
-                            this.factions[faction][actionO] = {};
+
+            if (faction.hasOwnProperty("spade_used_vp_gain")) {
+                this.factions[faction_type]["exchangetrack-1"]["vp"] = faction["spade_used_vp_gain"];
+                this.factions[faction_type]["exchangetrack-2"]["vp"] = faction["spade_used_vp_gain"];
+                this.factions[faction_type]["exchangetrack-3"]["vp"] = faction["spade_used_vp_gain"];
+            }
+            if (faction.hasOwnProperty("exchangetrack_upgrade") && faction["exchangetrack_upgrade"] == false) {
+                delete this.factions[faction_type]["exchangetrack"];
+                delete this.factions[faction_type]["exchangetrack-3"];
+                delete this.factions[faction_type]["exchangetrack-2"];
+                this.factions[faction_type]["exchangetrack-1"]["name"] = "Spade";
+            }
+
+            if (this.score == 0) {
+                delete this.factions[faction_type]["town"];
+            }
+        }
+
+        // override with specific faction info when needed
+        for(var faction in TMPfactionsOverride) {
+            if (this.factions.hasOwnProperty(faction)) {
+                var overrides = TMPfactionsOverride[faction];
+                for (var actionO in overrides) {
+                    var dataO = overrides[actionO];
+                    for(var keyO in dataO) {
+                        var valueO = dataO[keyO];
+                        if (keyO == "remove") {
+                            delete this.factions[faction][actionO];
+                        } else {
+                            if(!this.factions[faction].hasOwnProperty(actionO)) {
+                                this.factions[faction][actionO] = {};
+                            }
+                            this.factions[faction][actionO][keyO] = valueO;
                         }
-                        this.factions[faction][actionO][keyO] = valueO;
                     }
                 }
             }
@@ -328,7 +276,11 @@ var TMPlanner = {
          for (var playerId in this.gamedatas.players) {
              var playerInfo = this.gamedatas.players[playerId];
              var player = this.players[playerId];
-             player.built_structures = { "dwelling": 0, "tradinghouse": 0, "temple": 0, "stronghold": 0, "sanctuary": 0, "shipping": parseInt(playerInfo.player_shipping), "exchange": parseInt(playerInfo.player_exchange)-1 };
+             player.built_structures = { "dwelling": 0, "tradinghouse": 0, "temple": 0, "stronghold": 0, "sanctuary": 0, "shippingtrack": parseInt(playerInfo.player_shipping), "exchangetrack": parseInt(playerInfo.player_exchange)-1 };
+
+             if (playerInfo.faction == "mermaids") {
+                player.built_structures["shippingtrack"] += 1;
+            }
 
              player.cult.air = parseInt(playerInfo.player_aircult);
              player.cult.earth = parseInt(playerInfo.player_earthcult);
@@ -543,6 +495,12 @@ var TMPlanner = {
                 limit = 0;
             }
         }
+        if (action.hasOwnProperty("hide_with_no_structure")) {
+            if (parseInt(player.built_structures[action.hide_with_no_structure]) == 0) {
+                limit = 0;
+            }
+        }
+
         return limit;
     },
 
@@ -573,8 +531,11 @@ var TMPlanner = {
                         if (parseInt(elem.value) > limit) {
                             elem.value = limit;
                         }
+                        var elemLine = document.getElementById("select_line_" + r + "_" + playerId + "_" + actionIdx);
                         if (limit <= 0) {
-                            document.getElementById("select_line_" + r + "_" + playerId + "_" + actionIdx).setAttribute("class", "TMP_hidden");
+                            elemLine.setAttribute("class", "TMP_hidden");
+                        } else {
+                           elemLine.className = elemLine.className.replace('TMP_hidden','');
                         }
                     }
                 }
@@ -655,9 +616,9 @@ var TMPlanner = {
         for (var actionIdx in plannedActions) {
             var count = plannedActions[actionIdx];
             var action = faction[actionIdx];
-            nbWorkers += action.worker*count;
-            nbCoins += action.coin*count;
-            nbPriests += action.priest*count;
+            nbWorkers += action.workers*count;
+            nbCoins += action.coins*count;
+            nbPriests += action.priests*count;
         }
         document.getElementById("workerCount_" + round + "_" + playerId).innerHTML = nbWorkers;
         document.getElementById("coinCount_" + round + "_" + playerId).innerHTML = nbCoins;
@@ -666,25 +627,6 @@ var TMPlanner = {
         this.storePlannedActionsForPlayer(playerId, round, plannedActions);
         this.computeScoring(playerId, round);
         this.computeFinalScore();
-    },
-
-    computeStructureIncome : function(action, income_type, structure_number) {
-        var res = 0;
-        if (action.hasOwnProperty(income_type)) {
-            var income = action[income_type];
-            for (var i = 0; i < structure_number; i++) {
-                res += parseInt(income[i]);
-            }
-        }
-       return res;
-    },
-
-    computeActionIncome : function(action, income_type) {
-        var res = 0;
-        if (action.hasOwnProperty(income_type)) {
-            res += parseInt(action[income_type]);
-        }
-       return res;
     },
 
     computeArrayScore : function(arr, score_arr, added_score, tooltips, tootlip_name) {
@@ -849,6 +791,8 @@ var TMPlanner = {
 
     computeFinalScoreForTile: function(tile, plannedActions, buildingsAfterActions) {
         var VPToAdd = 0;
+        if (typeof tile === "undefined" || tile == null)
+            return VPToAdd;
         for(var idF in tile.building) {
             var building = tile.building[idF];
             var count = 0;
