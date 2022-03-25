@@ -28,15 +28,10 @@ var TMLayoutManager = {
 
         if (this.game.customLayout) {
             // prepare extra menu buttons
-            this.dojo.place( '<br /><div style="display:block">\
-                <h3>Layout management</h3>\
-                <p><span>Save layout: </span><button type="button" id="save_layout_button" style="width:20%">Save</button></p>\
-                <p><span>Load layout: </span><input type="file" id="load_layout_file_selector" accept=".json"></p>\
-                <p><span>Change background: </span><input type="file" id="bg_file_selector" accept=".jpg, .jpeg, .png"></p>\
-            </div>', $('controls') );
-            this.dojo.connect( $('save_layout_button'), "onclick", this, "downloadBoardInfo");
-            this.dojo.query( '#load_layout_file_selector' ).connect( 'onchange', this, 'onChangeLoadLayoutFileSelector' );
+            this.dojo.place( '<p><span>Change background: </span><input type="file" id="bg_file_selector" accept=".jpg, .jpeg, .png"></p>\
+                              <p><span>Background opacity: <input type="range" id="bg_opacity" min="0" max="100" value="25" step="1"></p>', $('layout_options_div') );
             this.dojo.query( '#bg_file_selector' ).connect( 'onchange', this, 'onChangeBGFileSelector' );
+            this.dojo.query( '#bg_opacity' ).connect( 'onchange', this, 'onChangeOpacity' );
 
             // reparent and make player info board movable
             var parent = document.getElementById("tm_game_area");
@@ -62,20 +57,26 @@ var TMLayoutManager = {
                     if (obj.hasOwnProperty('logs')) {
                         this.game.loadBoardRectToLocalStorage('logs', obj['logs']);
                     }
+
+                    if (obj.hasOwnProperty('opacity')) {
+                        this.bg_opacity = obj['opacity'];
+                        $( 'bg_opacity' ).value = Math.floor(this.bg_opacity*100);
+                        this.updateOpacity();
+                    } else {
+                        this.bg_opacity = 0.25;
+                    }
                 }
                 catch (error) {
                     console.log( "Error loading info player board position: " + error );
                 }
             }
 
-            // style title bar
-            this.resizeTitle();
-
             // hide stuff we do not want to see
-            this.dojo.style( 'generalactions', 'display', 'none' );
-            this.dojo.style( 'not_playing_help', 'visibility', 'hidden' );
-            this.dojo.style( 'not_playing_help', 'position', 'absolute' );
             this.dojo.style( 'right-side', 'display', 'none' );
+
+            // fit background size to panels
+            this.game.fitGameArea();
+            this.game.saveBoardsToLocalStorage = this.saveBoardsToLocalStorage.bind(this);
         }
 
         return this;
@@ -93,16 +94,15 @@ var TMLayoutManager = {
         drager.parentDiv = board;
     },
 
-    makeResizable:function(board_id) {   
-        var board = document.getElementById(board_id); 
+    makeResizable:function(board_id) {
+        var board = document.getElementById(board_id);
         var resizer = document.createElement("div");
-        resizer.className = "resizer-both";
+        resizer.className = "resizer";
         board.appendChild(resizer);
         resizer.addEventListener("mousedown", this.initResizeDrag.bind(this), false);
         resizer.parentDiv = board;
     },
 
-    
     initResizeDrag: function(e) {
         element = e.target.parentDiv;
         startX = e.clientX;
@@ -150,7 +150,9 @@ var TMLayoutManager = {
             to_save['player_info_board_'+i] = this.game.retrieveBoardRect('overall_player_board_'+this.game.players_in_order[i], false);
         }
 
-        to_save['logs'] = this.game.retrieveBoardRect('logs', true)
+        to_save['logs'] = this.game.retrieveBoardRect('logs', true);
+
+        to_save['opacity'] = this.bg_opacity;
 
         return to_save;
     },
@@ -159,38 +161,6 @@ var TMLayoutManager = {
         var to_save = this.getBoardInfoJson();
         var json = JSON.stringify(to_save);
         window.localStorage.setItem("BGA_TerraMystica_BoardPositions", json);
-    },
-
-    downloadBoardInfo: function() {
-        var to_save = this.getBoardInfoJson();
-        var json = JSON.stringify(to_save, null, 1);
-        window.localStorage.setItem("BGA_TerraMystica_BoardPositions", json);
-
-        var a = document.createElement("a");
-        var file = new Blob([json], {type: 'text/json'});
-        a.href = URL.createObjectURL(file);
-        a.download = "BGA_TM_layout.json";
-        a.click();
-    },
-
-    onChangeLoadLayoutFileSelector: function(event) {
-        var tgt = event.target;
-        var files = tgt.files;
-
-        // FileReader support
-        if (FileReader && files && files.length) {
-            var fileread = new FileReader();
-            fileread.onload = function(e) {
-                try {
-                    var json = e.target.result;
-                    window.localStorage.setItem("BGA_TerraMystica_BoardPositions", json);
-                    location.reload();
-                } catch (error) {
-                    console.log( "Error in onChangeLoadLayoutFileSelector: " + error );
-                }
-              };
-              fileread.readAsText(files[0]);
-        }
     },
 
     onChangeBGFileSelector: function(event) {
@@ -207,9 +177,24 @@ var TMLayoutManager = {
 		}
 	},
 
+    updateOpacity: function() {
+        this.dojo.style( 'faction_selection', 'background-color', 'rgba(255, 255, 255, '+this.bg_opacity+')' );
+        this.dojo.query(".faction_supply").style('background-color', 'rgba(255, 255, 255, '+this.bg_opacity+')' );
+	},
+
+    onChangeOpacity: function(event) {
+        var changed = event.target;
+        this.bg_opacity = changed.value / 100.0;
+        this.updateOpacity();
+        this.saveBoardsToLocalStorage();
+	},
+
     resizeTitle: function() {
         this.dojo.style( 'page-title', 'width', 'fit-content' );
         this.dojo.style( 'page-title', 'margin', '0 auto' );
+        this.dojo.style( 'generalactions', 'display', 'none' );
+        this.dojo.style( 'not_playing_help', 'visibility', 'hidden' );
+        this.dojo.style( 'not_playing_help', 'position', 'absolute' );
     },
 
     toggleChat: function() {
