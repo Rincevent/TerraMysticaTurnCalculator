@@ -3,7 +3,7 @@
 // @description  Visual aid that extends BGA Terra mystica game interface
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.5.0
+// @version      1.6.1
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -278,7 +278,7 @@ var TMPlanner = {
              var player = this.players[playerId];
              player.built_structures = { "dwelling": 0, "tradinghouse": 0, "temple": 0, "stronghold": 0, "sanctuary": 0, "shippingtrack": parseInt(playerInfo.player_shipping), "exchangetrack": parseInt(playerInfo.player_exchange)-1 };
 
-             if (playerInfo.faction == "mermaids") {
+            if (playerInfo.faction == "mermaids") {
                 player.built_structures["shippingtrack"] += 1;
             }
 
@@ -413,14 +413,14 @@ var TMPlanner = {
             menuHtml += "<tr><td style='padding-top: 5px'><u>Needs:</u></td></tr>";
             menuHtml += "<tr><td style='position: relative; top: -2px'>";
             menuHtml += "<label id='workerCount_" + j + "_" + playerId + "' style='position: relative; left: 8px; top: 6px'>0</label><div class='workers_collection ttworkers' style='position: relative; top: 10px; left: 10px; width: 21px; height: 21px; background-size: 364px 42px; background-position: -21px 0px'></div>";
-            menuHtml += "<label id='coinCount_" + j + "_" + playerId + "' style='padding-left: 15px; position: relative; top: 6px'>0</label><div class='coins_icon tm_panel_icon ttcoins' style='position: relative; top: 10px; left: 10px'></div>";
+            menuHtml += "<label id='coinCount_" + j + "_" + playerId + "' style='padding-left: 15px; position: relative; top: 6px'>0</label><div class='coins_icon tm_panel_icon ttcoins' style='position: relative; top: 10px'></div>";
 
             var priestStyle = "<position: relative; background-size: 351px 450px; background-repeat: no-repeat; background-position: -301px -281px; width: 51px; height: 51px;";
             var priestElem = document.getElementById("priests_collection_" + playerId);
             if (!isObjectEmpty(priestElem)) {
                 priestStyle = priestElem.getAttribute('style');
             }
-            menuHtml += "<label id='priestCount_" + j + "_" + playerId + "' style='padding-left: 2px; position: relative; left: 12px; top: 6px'>0</label><div class='priests_collection ttpriests' style='" + priestStyle + "'></div>";
+            menuHtml += "<label id='priestCount_" + j + "_" + playerId + "' style='padding-left: 2px; position: relative; left: 12px; top: 6px'>0</label><div class='priests_collection ttpriests' style='" + priestStyle + "; display:inline-block;margin: 8px 0px 0px 20px;'></div>";
             menuHtml += "</td></tr>";
             menuHtml += "</table>";
             if (this.score != 0) {
@@ -1009,7 +1009,7 @@ function waitForTMLoading(lambda) {
 }
 
 // Everything starts here
-window.onload = async function() {
+function onLoad(event) {
     if (Is_Inside_Game) {
         setTimeout(() => { // Wait for BGA to load dojo and TM scripts
             if (!window.parent || !window.parent.gameui || !window.parent.gameui.game_name ||
@@ -1029,3 +1029,5 @@ window.onload = async function() {
         }, 2000);
     }
 };
+
+window.addEventListener("load", onLoad);

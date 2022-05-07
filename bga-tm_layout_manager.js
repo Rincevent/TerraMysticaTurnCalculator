@@ -3,7 +3,7 @@
 // @description  Help manage layouts for TM games on BGA
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.0.0
+// @version      1.2.0
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -16,6 +16,8 @@ const Is_Inside_Game = /\?table=[0-9]*/.test(window.location.href);
 var TMLayoutManager = {
     dojo: null,
     game: null,
+    playerInfoMoved: false,
+    smallTittle: false,
 
     // Init TM Layour maanger
     init: function() {
@@ -29,57 +31,124 @@ var TMLayoutManager = {
         if (this.game.customLayout) {
             // prepare extra menu buttons
             this.dojo.place( '<p><span>Change background: </span><input type="file" id="bg_file_selector" accept=".jpg, .jpeg, .png"></p>\
-                              <p><span>Background opacity: <input type="range" id="bg_opacity" min="0" max="100" value="25" step="1"></p>', $('layout_options_div') );
+                              <p><span>Background opacity: <input type="range" id="bg_opacity" min="0" max="100" value="25" step="1"></p>\
+                              <p><label for="floating_panels_cb">Floating player panel:</label>&nbsp;&nbsp;<input type="checkbox" id="floating_panels_cb" name="floating_panels_cb"></p>\
+                              <p><label for="hide_chat_cb">Hide chat:</label>&nbsp;&nbsp;<input type="checkbox" id="hide_chat_cb" name="hide_chat_cb"></p>\
+                              <p><label for="small_title_cb">Small title (unplayable - only for spectators mode):</label>&nbsp;&nbsp;<input type="checkbox" id="small_title_cb" name="small_title_cb"></p>', $('layout_options_div') );
             this.dojo.query( '#bg_file_selector' ).connect( 'onchange', this, 'onChangeBGFileSelector' );
             this.dojo.query( '#bg_opacity' ).connect( 'onchange', this, 'onChangeOpacity' );
-
-            // reparent and make player info board movable
-            var parent = document.getElementById("tm_game_area");
-            for( var player_id in this.game.gamedatas.players )
-            {
-                this.makeMovable(parent, 'overall_player_board_' + player_id);
-            }
-
-            this.makeMovable(parent, 'logs');
-            this.makeResizable('logs');
-
-            // load board layout position from local storage
-            {
-                const json = window.localStorage.getItem("BGA_TerraMystica_BoardPositions");
-                try {
-                    const obj = JSON.parse(json);
-                    for (let i in this.game.players_in_order) {
-                        if (obj.hasOwnProperty('player_info_board_'+i)) {
-                            this.game.loadBoardRectToLocalStorage('overall_player_board_'+this.game.players_in_order[i], obj['player_info_board_'+i]);
-                        }
-                    }
-
-                    if (obj.hasOwnProperty('logs')) {
-                        this.game.loadBoardRectToLocalStorage('logs', obj['logs']);
-                    }
-
-                    if (obj.hasOwnProperty('opacity')) {
-                        this.bg_opacity = obj['opacity'];
-                        $( 'bg_opacity' ).value = Math.floor(this.bg_opacity*100);
-                        this.updateOpacity();
-                    } else {
-                        this.bg_opacity = 0.25;
-                    }
-                }
-                catch (error) {
-                    console.log( "Error loading info player board position: " + error );
-                }
-            }
-
-            // hide stuff we do not want to see
-            this.dojo.style( 'right-side', 'display', 'none' );
+            dojo.query( '#floating_panels_cb' ).connect( 'onchange', this, 'togglePlayerInfo' );
+            dojo.query( '#hide_chat_cb' ).connect( 'onchange', this, 'toggleChat' );
+            dojo.query( '#small_title_cb' ).connect( 'onchange', this, 'toggleSmallTitle' );
 
             // fit background size to panels
             this.game.fitGameArea();
+
             this.game.saveBoardsToLocalStorage = this.saveBoardsToLocalStorage.bind(this);
+            this.parentOnScreenWidthChange = this.game.onScreenWidthChange.bind(this.game);
+            this.game.onScreenWidthChange = this.onScreenWidthChange.bind(this);
         }
 
         return this;
+    },
+
+    onScreenWidthChange: function() {
+        this.parentOnScreenWidthChange();
+        this.onResize();
+    },
+
+    togglePlayerInfo: function() {
+        if (!this.playerInfoMoved) {
+            this.movdPlayerInfo();
+        } else {
+            this.restorePlayerInfo();
+        }
+
+        this.playerInfoMoved = !this.playerInfoMoved;
+
+        // fit background size to panels
+        this.game.fitGameArea();
+    },
+
+    movdPlayerInfo: function() {
+        // reparent and make player info board movable
+        var parent = document.getElementById("tm_game_area");
+        for( var player_id in this.game.gamedatas.players )
+        {
+            this.makeMovable(parent, 'overall_player_board_' + player_id);
+        }
+
+        this.makeMovable(parent, 'logs');
+        this.makeResizable('logs');
+
+        this.onResize();
+
+        // hide stuff we do not want to see
+        this.dojo.style( 'right-side', 'display', 'none' );
+    },
+
+    restorePlayerInfo: function() {
+        var parent = document.getElementById("player_boards");
+        for( var player_id in this.game.gamedatas.players )
+        {
+            this.makeUnMovable(parent, 'overall_player_board_' + player_id);
+        }
+
+        this.makeUnMovable(document.getElementById("logs_wrap"), 'logs');
+        this.makeUnresizable('logs');
+
+        this.dojo.style( 'right-side', 'display', 'block' );
+    },
+
+    makeUnMovable: function(parent, board_id) {
+        var board = document.getElementById(board_id);
+        board.style.position = null;
+        board.style.top = null;
+        board.style.left = null;
+        parent.appendChild(board);
+
+        var dragger = document.getElementById("dragger_" + board_id);
+        dragger.parentElement.removeChild(dragger);
+    },
+
+    makeUnresizable: function(board_id) {
+        var board = document.getElementById(board_id);
+        board.style.width = null;
+        board.style.height = null;
+
+        var resizer = document.getElementById("resizer_" + board_id);
+        resizer.parentElement.removeChild(resizer);
+    },
+
+    onResize: function() {
+        try {
+            for (let i in this.game.players_in_order) {
+                if (this.game.customLayoutInfo.hasOwnProperty('player_info_board_'+i)) {
+                    const layout = this.game.customLayoutInfo['player_info_board_'+i];
+                    var board = document.getElementById('overall_player_board_'+this.game.players_in_order[i]);
+                    board.style.left = Math.floor(parseFloat(layout.left)*this.game.playzoneCoords.w) + "px";
+                    board.style.top = Math.floor(parseFloat(layout.top)*this.game.playzoneCoords.w) + "px";
+                }
+            }
+
+            if (this.game.customLayoutInfo.hasOwnProperty('logs')) {
+                this.game.setBoardPosition(this.game.playzoneCoords.w, 'logs');
+                var board = document.getElementById('logs');
+                board.style.width = this.game.retrieveBoardWidth(this.game.playzoneCoords.w, 'logs') + "px";
+                board.style.height = this.game.retrieveBoardHeight(this.game.playzoneCoords.w, 'logs') + "px";
+            }
+
+            if (this.game.customLayoutInfo.hasOwnProperty('opacity')) {
+                this.bg_opacity = this.game.customLayoutInfo['opacity'];
+                $( 'bg_opacity' ).value = Math.floor(this.bg_opacity*100);
+                this.updateOpacity();
+            } else {
+                this.bg_opacity = 0.25;
+            }
+        }
+        catch (error) {
+            console.log( "Error loading info player board position: " + error );
+        }
     },
 
     makeMovable: function(parent, board_id) {
@@ -89,6 +158,7 @@ var TMLayoutManager = {
 
         var drager = document.createElement("div");
         drager.className = "dragable";
+        drager.id = "dragger_" + board_id;
         board.appendChild(drager);
         drager.addEventListener("mousedown", this.game.initMoveDrag.bind(this.game), false);
         drager.parentDiv = board;
@@ -98,6 +168,7 @@ var TMLayoutManager = {
         var board = document.getElementById(board_id);
         var resizer = document.createElement("div");
         resizer.className = "resizer";
+        resizer.id = "resizer_" + board_id;
         board.appendChild(resizer);
         resizer.addEventListener("mousedown", this.initResizeDrag.bind(this), false);
         resizer.parentDiv = board;
@@ -144,13 +215,14 @@ var TMLayoutManager = {
     },
 
     getBoardInfoJson: function() {
+        const game_page_width = dojo.coords( 'tm_game_area' ).w;
         var to_save = this.game.getBoardInfoJson();
 
         for (let i in this.game.players_in_order) {
-            to_save['player_info_board_'+i] = this.game.retrieveBoardRect('overall_player_board_'+this.game.players_in_order[i], false);
+            to_save['player_info_board_'+i] = this.game.retrieveBoardRect(game_page_width, 'overall_player_board_'+this.game.players_in_order[i], false);
         }
 
-        to_save['logs'] = this.game.retrieveBoardRect('logs', true);
+        to_save['logs'] = this.game.retrieveBoardRect(game_page_width, 'logs', true);
 
         to_save['opacity'] = this.bg_opacity;
 
@@ -160,7 +232,7 @@ var TMLayoutManager = {
     saveBoardsToLocalStorage: function() {
         var to_save = this.getBoardInfoJson();
         var json = JSON.stringify(to_save);
-        window.localStorage.setItem("BGA_TerraMystica_BoardPositions", json);
+        window.localStorage.setItem("BGA_TerraMystica_Layout", json);
     },
 
     onChangeBGFileSelector: function(event) {
@@ -189,12 +261,30 @@ var TMLayoutManager = {
         this.saveBoardsToLocalStorage();
 	},
 
+    toggleSmallTitle: function() {
+        this.smallTittle = !this.smallTittle;
+        if (this.smallTittle)
+            this.resizeTitle();
+        else
+        this.restoreTitle();
+    },
+
     resizeTitle: function() {
-        this.dojo.style( 'page-title', 'width', 'fit-content' );
-        this.dojo.style( 'page-title', 'margin', '0 auto' );
-        this.dojo.style( 'generalactions', 'display', 'none' );
-        this.dojo.style( 'not_playing_help', 'visibility', 'hidden' );
-        this.dojo.style( 'not_playing_help', 'position', 'absolute' );
+        if (this.smallTittle && !this.dojo.hasClass('page-title', 'fixed-page-title')) {
+            this.dojo.style( 'page-title', 'width', 'fit-content' );
+            this.dojo.style( 'page-title', 'margin', '0 auto' );
+            this.dojo.style( 'generalactions', 'display', 'none' );
+            this.dojo.style( 'not_playing_help', 'visibility', 'hidden' );
+            this.dojo.style( 'not_playing_help', 'position', 'absolute' );
+        }
+    },
+
+    restoreTitle: function() {
+        this.dojo.style( 'page-title', 'width', null );
+        this.dojo.style( 'page-title', 'margin', null );
+        this.dojo.style( 'generalactions', 'display', 'inline' );
+        this.dojo.style( 'not_playing_help', 'visibility', null );
+        this.dojo.style( 'not_playing_help', 'position', null );
     },
 
     toggleChat: function() {
@@ -229,17 +319,34 @@ function waitForTMLoading(lambda) {
     setTimeout(() => {waitForTMLoading(lambda);} , 1000);
 }
 
+function onLoad(event) {
+    if (Is_Inside_Game) {
+        setTimeout(() => { // Wait for BGA to load dojo and TM scripts
+            if (!window.parent || !window.parent.gameui || !window.parent.gameui.game_name ||
+                (window.parent.gameui.game_name != "terramystica" && window.parent.gameui.game_name != "terramysticaext")) {
+                return;
+            }
+            waitForTMLoading(() => {
+                // Prevent multiple launches
+                if (window.parent.isTMLayoutManagerStarted) {
+                    return;
+                } else {
+                    console.log("TMLayoutManager activated");
+                    window.parent.isTMLayoutManagerStarted = true;
+                    window.parent.tmLayoutManager = TMLayoutManager.init();
+                    document.documentElement.addEventListener("keypress", onKeyPress);
+                    window.addEventListener("scroll", window.parent.tmLayoutManager.resizeTitle.bind(window.parent.tmLayoutManager));
+                }
+            });
+        }, 2000);
+    }
+}
+
 function onKeyPress(event) {
     if (event.ctrlKey && event.shiftKey && event.keyCode == 12 && Is_Inside_Game) { // L
-        if (!window.parent || !window.parent.gameui || !window.parent.gameui.game_name ||
-            (window.parent.gameui.game_name != "terramystica") || window.parent.isTMLayoutManagerStarted) {
-            return;
+        if (window.parent && window.parent.tmLayoutManager) {
+            window.parent.tmLayoutManager.togglePlayerInfo();
         }
-        waitForTMLoading(() => {
-            console.log("TMLayoutManager activated");
-            window.parent.isTMLayoutManagerStarted = true;
-            window.parent.tmLayoutManager = TMLayoutManager.init();
-        });
     }
     if (event.ctrlKey && event.shiftKey && event.keyCode == 11 && Is_Inside_Game) { // K
         if (window.parent && window.parent.tmLayoutManager) {
@@ -248,9 +355,9 @@ function onKeyPress(event) {
     }
     if (event.ctrlKey && event.shiftKey && event.keyCode == 21 && Is_Inside_Game) { // U
         if (window.parent && window.parent.tmLayoutManager) {
-            window.parent.tmLayoutManager.resizeTitle();
+            window.parent.tmLayoutManager.toggleSmallTitle();
         }
     }
 }
 
-document.documentElement.addEventListener("keypress", onKeyPress); 
+window.addEventListener("load", onLoad);
