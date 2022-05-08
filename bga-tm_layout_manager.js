@@ -122,20 +122,22 @@ var TMLayoutManager = {
 
     onResize: function() {
         try {
-            for (let i in this.game.players_in_order) {
-                if (this.game.customLayoutInfo.hasOwnProperty('player_info_board_'+i)) {
-                    const layout = this.game.customLayoutInfo['player_info_board_'+i];
-                    var board = document.getElementById('overall_player_board_'+this.game.players_in_order[i]);
-                    board.style.left = Math.floor(parseFloat(layout.left)*this.game.playzoneCoords.w) + "px";
-                    board.style.top = Math.floor(parseFloat(layout.top)*this.game.playzoneCoords.w) + "px";
+            if (this.playerInfoMoved) {
+                for (let i in this.game.players_in_order) {
+                    if (this.game.customLayoutInfo.hasOwnProperty('player_info_board_'+i)) {
+                        const layout = this.game.customLayoutInfo['player_info_board_'+i];
+                        var board = document.getElementById('overall_player_board_'+this.game.players_in_order[i]);
+                        board.style.left = Math.floor(parseFloat(layout.left)*this.game.playzoneCoords.w) + "px";
+                        board.style.top = Math.floor(parseFloat(layout.top)*this.game.playzoneCoords.w) + "px";
+                    }
                 }
-            }
 
-            if (this.game.customLayoutInfo.hasOwnProperty('logs')) {
-                this.game.setBoardPosition(this.game.playzoneCoords.w, 'logs');
-                var board = document.getElementById('logs');
-                board.style.width = this.game.retrieveBoardWidth(this.game.playzoneCoords.w, 'logs') + "px";
-                board.style.height = this.game.retrieveBoardHeight(this.game.playzoneCoords.w, 'logs') + "px";
+                if (this.game.customLayoutInfo.hasOwnProperty('logs')) {
+                    this.game.setBoardPosition(this.game.playzoneCoords.w, 'logs');
+                    var board = document.getElementById('logs');
+                    board.style.width = this.game.retrieveBoardWidth(this.game.playzoneCoords.w, 'logs') + "px";
+                    board.style.height = this.game.retrieveBoardHeight(this.game.playzoneCoords.w, 'logs') + "px";
+                }
             }
 
             if (this.game.customLayoutInfo.hasOwnProperty('opacity')) {
