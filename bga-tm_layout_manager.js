@@ -58,19 +58,18 @@ var TMLayoutManager = {
     },
 
     togglePlayerInfo: function() {
-        if (!this.playerInfoMoved) {
-            this.movdPlayerInfo();
+        this.playerInfoMoved = !this.playerInfoMoved;
+        if (this.playerInfoMoved) {
+            this.movePlayerInfo();
         } else {
             this.restorePlayerInfo();
         }
-
-        this.playerInfoMoved = !this.playerInfoMoved;
 
         // fit background size to panels
         this.game.fitGameArea();
     },
 
-    movdPlayerInfo: function() {
+    movePlayerInfo: function() {
         // reparent and make player info board movable
         var parent = document.getElementById("tm_game_area");
         for( var player_id in this.game.gamedatas.players )
