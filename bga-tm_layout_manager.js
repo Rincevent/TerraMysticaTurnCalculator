@@ -3,7 +3,7 @@
 // @description  Help manage layouts for TM games on BGA
 // @namespace    https://github.com/Rincevent/TerraMysticaTurnCalculator
 // @author       https://github.com/Rincevent
-// @version      1.2.0
+// @version      1.2.1
 // @include      *boardgamearena.com/*
 // @grant        none
 // ==/UserScript==
@@ -18,6 +18,7 @@ var TMLayoutManager = {
     game: null,
     playerInfoMoved: false,
     smallTittle: false,
+    hideChat: false,
 
     // Init TM Layour maanger
     init: function() {
@@ -29,17 +30,24 @@ var TMLayoutManager = {
         this.game = window.parent.gameui;
 
         if (this.game.customLayout) {
+
             // prepare extra menu buttons
             this.dojo.place( '<p><span>Change background: </span><input type="file" id="bg_file_selector" accept=".jpg, .jpeg, .png"></p>\
+                              <p><button id="bg_reset_button" style="width:20%">Reset</button></p>\
                               <p><span>Background opacity: <input type="range" id="bg_opacity" min="0" max="100" value="25" step="1"></p>\
                               <p><label for="floating_panels_cb">Floating player panel:</label>&nbsp;&nbsp;<input type="checkbox" id="floating_panels_cb" name="floating_panels_cb"></p>\
                               <p><label for="hide_chat_cb">Hide chat:</label>&nbsp;&nbsp;<input type="checkbox" id="hide_chat_cb" name="hide_chat_cb"></p>\
                               <p><label for="small_title_cb">Small title (unplayable - only for spectators mode):</label>&nbsp;&nbsp;<input type="checkbox" id="small_title_cb" name="small_title_cb"></p>', $('layout_options_div') );
+
+
+            this.loadInfoFromJson();
+
             this.dojo.query( '#bg_file_selector' ).connect( 'onchange', this, 'onChangeBGFileSelector' );
             this.dojo.query( '#bg_opacity' ).connect( 'onchange', this, 'onChangeOpacity' );
             dojo.query( '#floating_panels_cb' ).connect( 'onchange', this, 'togglePlayerInfo' );
             dojo.query( '#hide_chat_cb' ).connect( 'onchange', this, 'toggleChat' );
             dojo.query( '#small_title_cb' ).connect( 'onchange', this, 'toggleSmallTitle' );
+            dojo.query( '#bg_reset_button' ).connect( 'onclick', this, 'resetBackground' );
 
             // fit background size to panels
             this.game.fitGameArea();
@@ -47,6 +55,7 @@ var TMLayoutManager = {
             this.game.saveBoardsToLocalStorage = this.saveBoardsToLocalStorage.bind(this);
             this.parentOnScreenWidthChange = this.game.onScreenWidthChange.bind(this.game);
             this.game.onScreenWidthChange = this.onScreenWidthChange.bind(this);
+
         }
 
         return this;
@@ -59,6 +68,12 @@ var TMLayoutManager = {
 
     togglePlayerInfo: function() {
         this.playerInfoMoved = !this.playerInfoMoved;
+        this.saveBoardsToLocalStorage();
+
+        this.updatePlayerInfo();
+    },
+
+    updatePlayerInfo: function() {
         if (this.playerInfoMoved) {
             this.movePlayerInfo();
         } else {
@@ -107,7 +122,8 @@ var TMLayoutManager = {
         parent.appendChild(board);
 
         var dragger = document.getElementById("dragger_" + board_id);
-        dragger.parentElement.removeChild(dragger);
+        if (dragger)
+            dragger.parentElement.removeChild(dragger);
     },
 
     makeUnresizable: function(board_id) {
@@ -116,7 +132,8 @@ var TMLayoutManager = {
         board.style.height = null;
 
         var resizer = document.getElementById("resizer_" + board_id);
-        resizer.parentElement.removeChild(resizer);
+        if (resizer)
+            resizer.parentElement.removeChild(resizer);
     },
 
     onResize: function() {
@@ -138,18 +155,40 @@ var TMLayoutManager = {
                     board.style.height = this.game.retrieveBoardHeight(this.game.playzoneCoords.w, 'logs') + "px";
                 }
             }
-
-            if (this.game.customLayoutInfo.hasOwnProperty('opacity')) {
-                this.bg_opacity = this.game.customLayoutInfo['opacity'];
-                $( 'bg_opacity' ).value = Math.floor(this.bg_opacity*100);
-                this.updateOpacity();
-            } else {
-                this.bg_opacity = 0.25;
-            }
         }
         catch (error) {
             console.log( "Error loading info player board position: " + error );
         }
+    },
+
+    loadInfoFromJson: function() {
+        if (this.game.customLayoutInfo.hasOwnProperty('opacity')) {
+            this.bg_opacity = this.game.customLayoutInfo['opacity'];
+            $( 'bg_opacity' ).value = Math.floor(this.bg_opacity*100);
+            this.updateOpacity();
+        } else {
+            this.bg_opacity = 0.25;
+        }
+
+        if (this.game.customLayoutInfo.hasOwnProperty('floating_panels')) {
+            this.playerInfoMoved = this.game.customLayoutInfo['floating_panels'];
+            $( 'floating_panels_cb' ).checked = this.playerInfoMoved;
+            this.updatePlayerInfo();
+        }
+        if (this.game.customLayoutInfo.hasOwnProperty('hide_chat')) {
+            this.hideChat = this.game.customLayoutInfo['hide_chat'];
+            $( 'hide_chat_cb' ).checked = this.hideChat;
+            this.updateChat();
+        }
+        if (this.game.customLayoutInfo.hasOwnProperty('small_title')) {
+            this.smallTittle = this.game.customLayoutInfo['small_title'];
+            $( 'small_title_cb' ).checked = this.smallTittle;
+            this.updateTitle();
+        }
+
+        const imgFile = window.localStorage.getItem("BGA_TerraMystica_CustomBG");
+        if (imgFile != null && imgFile != undefined)
+            document.getElementById("overall-content").style.backgroundImage = `url(${imgFile})`;
     },
 
     makeMovable: function(parent, board_id) {
@@ -226,6 +265,9 @@ var TMLayoutManager = {
         to_save['logs'] = this.game.retrieveBoardRect(game_page_width, 'logs', true);
 
         to_save['opacity'] = this.bg_opacity;
+        to_save['floating_panels'] = this.playerInfoMoved;
+        to_save['hide_chat'] = this.hideChat;
+        to_save['small_title'] = this.smallTittle;
 
         return to_save;
     },
@@ -244,15 +286,23 @@ var TMLayoutManager = {
 		if (FileReader && files && files.length) {
 			var fr = new FileReader();
 			fr.onload = function () {
-				document.getElementById("overall-content").style.backgroundImage = `url(${fr.result})`;
+                const imgFile = fr.result;
+                window.localStorage.setItem("BGA_TerraMystica_CustomBG", imgFile);
+				document.getElementById("overall-content").style.backgroundImage = `url(${imgFile})`;
 			}
 			fr.readAsDataURL(files[0]);
 		}
 	},
 
+    resetBackground: function(event) {
+        document.getElementById("overall-content").style.backgroundImage = null;
+        window.localStorage.setItem("BGA_TerraMystica_CustomBG", null);
+    },
+
     updateOpacity: function() {
         this.dojo.style( 'faction_selection', 'background-color', 'rgba(255, 255, 255, '+this.bg_opacity+')' );
         this.dojo.query(".faction_supply").style('background-color', 'rgba(255, 255, 255, '+this.bg_opacity+')' );
+        this.dojo.query(".favors_collection").style('background-color', 'rgba(255, 255, 255, '+this.bg_opacity+')' );
 	},
 
     onChangeOpacity: function(event) {
@@ -264,10 +314,15 @@ var TMLayoutManager = {
 
     toggleSmallTitle: function() {
         this.smallTittle = !this.smallTittle;
+        this.saveBoardsToLocalStorage();
+        this.updateTitle();
+    },
+
+    updateTitle: function() {
         if (this.smallTittle)
             this.resizeTitle();
         else
-        this.restoreTitle();
+            this.restoreTitle();
     },
 
     resizeTitle: function() {
@@ -289,8 +344,14 @@ var TMLayoutManager = {
     },
 
     toggleChat: function() {
+        this.hideChat = !this.hideChat
+        this.saveBoardsToLocalStorage();
+        this.updateChat();
+    },
+
+    updateChat: function() {
         var x = document.getElementById("chatbar");
-        if (x.style.display === "none") {
+        if (!this.hideChat) {
           x.style.display = "block";
         } else {
           x.style.display = "none";
