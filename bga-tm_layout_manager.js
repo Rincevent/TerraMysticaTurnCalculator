@@ -19,6 +19,7 @@ var TMLayoutManager = {
     playerInfoMoved: false,
     smallTittle: false,
     hideChat: false,
+    stored_dom: [],
 
     // Init TM Layour maanger
     init: function() {
@@ -32,14 +33,7 @@ var TMLayoutManager = {
         if (this.game.customLayout) {
 
             // prepare extra menu buttons
-            this.dojo.place( '<p><span>Change background: </span><input type="file" id="bg_file_selector" accept=".jpg, .jpeg, .png"></p>\
-                              <p><button id="bg_reset_button" style="width:20%">Reset</button></p>\
-                              <p><span>Background opacity: <input type="range" id="bg_opacity" min="0" max="100" value="25" step="1"></p>\
-                              <p><label for="floating_panels_cb">Floating player panel:</label>&nbsp;&nbsp;<input type="checkbox" id="floating_panels_cb" name="floating_panels_cb"></p>\
-                              <p><label for="hide_chat_cb">Hide chat:</label>&nbsp;&nbsp;<input type="checkbox" id="hide_chat_cb" name="hide_chat_cb"></p>\
-                              <p><label for="small_title_cb">Small title (unplayable - only for spectators mode):</label>&nbsp;&nbsp;<input type="checkbox" id="small_title_cb" name="small_title_cb"></p>', $('layout_options_div') );
-
-
+            this.updateBlueMenu();
             this.loadInfoFromJson();
 
             this.dojo.query( '#bg_file_selector' ).connect( 'onchange', this, 'onChangeBGFileSelector' );
@@ -56,9 +50,36 @@ var TMLayoutManager = {
             this.parentOnScreenWidthChange = this.game.onScreenWidthChange.bind(this.game);
             this.game.onScreenWidthChange = this.onScreenWidthChange.bind(this);
 
+            this.parentSetup = this.game.setup.bind(this.game);
+            this.game.setup = this.setup.bind(this);
         }
 
         return this;
+    },
+
+    updateBlueMenu: function() {
+        this.dojo.place( '<p><span>Change background: </span><input type="file" id="bg_file_selector" accept=".jpg, .jpeg, .png"></p>\
+            <p><button id="bg_reset_button" style="width:20%">Reset</button></p>\
+            <p><span>Background opacity: <input type="range" id="bg_opacity" min="0" max="100" value="25" step="1"></p>\
+            <p><label for="floating_panels_cb">Floating player panel:</label>&nbsp;&nbsp;<input type="checkbox" id="floating_panels_cb" name="floating_panels_cb"></p>\
+            <p><label for="hide_chat_cb">Hide chat:</label>&nbsp;&nbsp;<input type="checkbox" id="hide_chat_cb" name="hide_chat_cb"></p>\
+            <p><label for="small_title_cb">Small title (unplayable - only for spectators mode):</label>&nbsp;&nbsp;<input type="checkbox" id="small_title_cb" name="small_title_cb"></p>', $('layout_options_div') );
+    },
+
+    setup: function(gamedatas) {
+        if (this.playerInfoMoved) {
+            // temporarely restore player board to make undo work properly on parent
+            var parent = document.getElementById("player_boards");
+            for( var boardIdx in this.stored_dom )
+            {
+                parent.appendChild(this.stored_dom[boardIdx]);
+            }
+            this.stored_dom = [];
+        }
+        this.parentSetup(gamedatas);
+        this.updateBlueMenu();
+        this.loadInfoFromJson();
+        this.updatePlayerInfo();
     },
 
     onScreenWidthChange: function() {
@@ -90,9 +111,11 @@ var TMLayoutManager = {
         for( var player_id in this.game.gamedatas.players )
         {
             this.makeMovable(parent, 'overall_player_board_' + player_id);
+            this.stored_dom.push($('overall_player_board_' + player_id));
         }
 
         this.makeMovable(parent, 'logs');
+        this.stored_dom.push($('logs'));
         this.makeResizable('logs');
 
         this.onResize();
@@ -149,10 +172,11 @@ var TMLayoutManager = {
                 }
 
                 if (this.game.customLayoutInfo.hasOwnProperty('logs')) {
-                    this.game.setBoardPosition(this.game.playzoneCoords.w, 'logs');
                     var board = document.getElementById('logs');
                     board.style.width = this.game.retrieveBoardWidth(this.game.playzoneCoords.w, 'logs') + "px";
                     board.style.height = this.game.retrieveBoardHeight(this.game.playzoneCoords.w, 'logs') + "px";
+                    this.game.setBoardPosition(this.game.playzoneCoords.w, 'logs');
+                    board.style.top = parseInt(board.style.top, 10) -10 + "px"; // no idea why logs div is always 10px down
                 }
             }
         }
