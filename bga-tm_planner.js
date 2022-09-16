@@ -705,7 +705,7 @@ var TMPlanner = {
                 }
             }
 
-            var structure_count = parseInt(this.gamedatas.counters["structures_count_" + playerId].counter_value);
+            var structure_count = parseInt(this.gamedatas.counters["stc_" + playerId].counter_value);
             if (structure_count > 0) {
                 if (network.hasOwnProperty (structure_count)) {
                     network[structure_count].push(playerId);
@@ -714,8 +714,8 @@ var TMPlanner = {
                 }
             }
 
-            if (this.gamedatas.counters.hasOwnProperty("fire_ice_scoring_count_" + playerId)) {
-                var fi_count = parseInt(this.gamedatas.counters["fire_ice_scoring_count_" + playerId].counter_value);
+            if (this.gamedatas.counters.hasOwnProperty("fic_" + playerId)) {
+                var fi_count = parseInt(this.gamedatas.counters["fic_" + playerId].counter_value);
                 if (fi_count > 0) {
                     if (fi.hasOwnProperty (fi_count)) {
                         fi[fi_count].push(playerId);
